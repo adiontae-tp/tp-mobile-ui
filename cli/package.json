@@ -1,0 +1,16 @@
+{
+  "name": "mobile-ui-cli",
+  "version": "0.1.0",
+  "description": "CLI to add mobile-ui components to your project",
+  "type": "module",
+  "bin": {
+    "mobile-ui": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "registry"
+  ],
+  "scripts": {
+    "build": "node build.js"
+  }
+}

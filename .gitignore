@@ -1,0 +1,8 @@
+node_modules
+dist
+.vite
+*.local
+*.tsbuildinfo
+cli/dist
+cli/registry
+cli/node_modules
