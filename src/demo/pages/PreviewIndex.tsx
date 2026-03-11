@@ -15,6 +15,8 @@ const components = [
   { path: "bottom-sheet", title: "Bottom Sheet" },
   { path: "action-sheet", title: "Action Sheet" },
   { path: "toast", title: "Toast" },
+  { path: "bottom-tabs", title: "Bottom Tabs" },
+  { path: "navigation", title: "Navigation" },
 ];
 
 export function PreviewIndex() {

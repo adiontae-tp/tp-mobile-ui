@@ -40,6 +40,8 @@ const navSections = [
       { path: "/bottom-sheet", label: "Bottom Sheet" },
       { path: "/action-sheet", label: "Action Sheet" },
       { path: "/toast", label: "Toast" },
+      { path: "/bottom-tabs", label: "Bottom Tabs" },
+      { path: "/navigation", label: "Navigation" },
     ],
   },
 ];

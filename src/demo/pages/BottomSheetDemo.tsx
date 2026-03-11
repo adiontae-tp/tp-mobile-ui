@@ -9,6 +9,7 @@ const usage = `import {
 
 const [open, setOpen] = useState(false)
 
+// Basic usage
 <BottomSheet open={open} onOpenChange={setOpen}>
   <BottomSheetTrigger asChild>
     <Button>Open Sheet</Button>
@@ -22,13 +23,23 @@ const [open, setOpen] = useState(false)
     </BottomSheetHeader>
     <p>Sheet content here.</p>
   </BottomSheetContent>
-</BottomSheet>`;
+</BottomSheet>
+
+// With snap points (iOS-style detents)
+<BottomSheetContent
+  onClose={() => setOpen(false)}
+  snapPoints={[0.25, 0.5, 0.85]}
+  defaultSnapPoint={1}
+  onSnapPointChange={(index) => console.log(index)}
+>
+  ...
+</BottomSheetContent>`;
 
 export function BottomSheetDemo() {
   return (
     <ComponentPage
       title="Bottom Sheet"
-      description="Draggable bottom panel with spring animations. Built on Radix Dialog for accessibility and framer-motion for gesture support. Swipe down to dismiss."
+      description="Draggable bottom panel with spring animations and snap points. Built on Radix Dialog for accessibility and framer-motion for gesture support. Supports iOS-style detents — define snap points as viewport fractions (e.g. 25%, 50%, 85%)."
       usage={usage}
     >
       <BottomSheetPreview />
