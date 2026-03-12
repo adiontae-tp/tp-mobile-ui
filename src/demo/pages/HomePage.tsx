@@ -36,7 +36,7 @@ export function HomePage() {
       <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-16">
         <div className="flex-1 space-y-6">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Mobile UI
+            TP Mobile UI
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
             Mobile-first components built with React and Tailwind CSS.
@@ -124,7 +124,7 @@ export function MyPage() {
       <div className="space-y-8">
         <h2 className="text-2xl font-semibold">Using with Desktop Libraries</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Mobile UI is designed to coexist with desktop component libraries like shadcn/ui.
+          TP Mobile UI is designed to coexist with desktop component libraries like shadcn/ui.
           Use the <Link to="/view-switcher" className="font-medium text-primary hover:underline">View Switcher</Link> to
           render different component trees per viewport — mobile-ui components on phones,
           shadcn or any other library on desktop.
@@ -205,7 +205,7 @@ export function AppLayout({ children }) {
       <div className="space-y-8">
         <h2 className="text-2xl font-semibold">AI / LLM Integration</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Mobile UI ships with an MCP server that lets AI assistants explore the component library,
+          TP Mobile UI ships with an MCP server that lets AI assistants explore the component library,
           read source code and props, understand the theme, and scaffold new components.
         </p>
 

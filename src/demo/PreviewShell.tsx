@@ -16,7 +16,7 @@ export function PreviewShell() {
   return (
     <div className="flex h-dvh flex-col bg-background text-foreground">
       <Header
-        title={isIndex ? "Mobile UI" : getTitle(location.pathname)}
+        title={isIndex ? "TP Mobile UI" : getTitle(location.pathname)}
         leftAction={
           !isIndex ? (
             <Button

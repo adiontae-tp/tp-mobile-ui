@@ -116,7 +116,7 @@ export function DemoShell() {
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <Link to="/" className="text-lg font-bold tracking-tight">
-            Mobile UI
+            TP Mobile UI
           </Link>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
             v0.1
