@@ -370,12 +370,44 @@ const ToolbarSheetContent = React.forwardRef<
     (e: React.PointerEvent<HTMLDivElement>) => {
       const el = innerRef.current;
       if (el && el.scrollTop > 0) {
-        // Content is scrolled — let the scroll area handle the gesture, not the sheet
         e.stopPropagation();
       }
     },
     []
   );
+
+  // Prevent iOS pull-to-refresh when scrolled to top and pulling down.
+  // touchmove at scrollTop=0 with downward direction would chain to the
+  // browser's overscroll — we block it here so the sheet drag handles it.
+  React.useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+
+    let startY = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const dy = e.touches[0].clientY - startY;
+      // Pulling down while already at the top — block browser overscroll
+      if (el.scrollTop <= 0 && dy > 0) {
+        e.preventDefault();
+      }
+      // Pulling up while already at the bottom — block browser overscroll
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight && dy < 0) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
 
   return (
     <motion.div

@@ -1,3 +1,6 @@
+/** Version embedded in copied component files for update tracking. */
+export const REGISTRY_VERSION = "0.2.0";
+
 /** @type {Record<string, { file: string, dependencies: string[], internalDeps: string[], description: string }>} */
 export const registry = {
   button: {
@@ -76,12 +79,66 @@ export const registry = {
     file: "bottom-sheet.tsx",
     dependencies: ["@radix-ui/react-dialog", "framer-motion", "clsx", "tailwind-merge"],
     internalDeps: [],
-    description: "Draggable bottom panel with spring animations.",
+    description: "Draggable bottom panel with spring animations and snap points.",
   },
   "action-sheet": {
     file: "action-sheet.tsx",
     dependencies: ["@radix-ui/react-dialog", "framer-motion", "clsx", "tailwind-merge"],
     internalDeps: ["bottom-sheet", "separator"],
     description: "iOS-style action menu built on Bottom Sheet.",
+  },
+  "bottom-tabs": {
+    file: "bottom-tabs.tsx",
+    dependencies: ["framer-motion", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Bottom tab bar with animated active indicator.",
+  },
+  drawer: {
+    file: "drawer.tsx",
+    dependencies: ["framer-motion", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Slide-out drawer panel with swipe gestures.",
+  },
+  list: {
+    file: "list.tsx",
+    dependencies: ["lucide-react", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "iOS-style grouped list with sections and accessories.",
+  },
+  "footer-buttons": {
+    file: "footer-buttons.tsx",
+    dependencies: ["clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Sticky footer bar for one or two action buttons.",
+  },
+  "footer-sheet": {
+    file: "footer-sheet.tsx",
+    dependencies: ["framer-motion", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Bottom sheet with built-in footer buttons and snap points.",
+  },
+  "toolbar-sheet": {
+    file: "toolbar-sheet.tsx",
+    dependencies: ["framer-motion", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Bottom toolbar with expandable sheet content.",
+  },
+  "view-switcher": {
+    file: "view-switcher.tsx",
+    dependencies: ["clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Responsive viewport-aware layout switcher.",
+  },
+  "week-calendar": {
+    file: "week-calendar.tsx",
+    dependencies: ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Swipeable week calendar with date selection.",
+  },
+  navigation: {
+    file: "navigation/",
+    dependencies: ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
+    internalDeps: ["bottom-tabs"],
+    description: "Stack, tab, and modal navigators with shared element transitions.",
   },
 };

@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readdirSync, existsSync } from "fs";
+import { copyFileSync, mkdirSync, readdirSync, existsSync, statSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -14,14 +14,30 @@ for (const file of readdirSync(src)) {
   copyFileSync(join(src, file), join(dist, file));
 }
 
-// Copy component files to registry
+// Copy component files to registry (including subdirectories like navigation/)
 mkdirSync(join(registryDest, "ui"), { recursive: true });
 mkdirSync(join(registryDest, "lib"), { recursive: true });
 
 const uiDir = join(registrySrc, "components", "ui");
-for (const file of readdirSync(uiDir)) {
-  copyFileSync(join(uiDir, file), join(registryDest, "ui", file));
+
+function copyDir(srcDir, destDir) {
+  ensureDir(destDir);
+  for (const entry of readdirSync(srcDir)) {
+    const srcPath = join(srcDir, entry);
+    const destPath = join(destDir, entry);
+    if (statSync(srcPath).isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
 }
+
+function ensureDir(dir) {
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
+
+copyDir(uiDir, join(registryDest, "ui"));
 
 copyFileSync(
   join(registrySrc, "lib", "utils.ts"),

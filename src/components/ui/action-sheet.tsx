@@ -38,9 +38,9 @@ function ActionSheet({
   };
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} modal={!container}>
+    <BottomSheet open={open} onOpenChange={onOpenChange} modal={!container} container={container}>
       {children && <BottomSheetTrigger asChild>{children}</BottomSheetTrigger>}
-      <BottomSheetContent onClose={() => onOpenChange?.(false)} container={container}>
+      <BottomSheetContent>
         <div className="flex flex-col">
           {actions.map((action, index) => (
             <React.Fragment key={index}>

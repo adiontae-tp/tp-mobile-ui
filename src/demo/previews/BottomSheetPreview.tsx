@@ -18,11 +18,11 @@ export function BottomSheetPreview() {
         Drag the handle down to dismiss, or tap the overlay.
       </p>
 
-      <BottomSheet open={open} onOpenChange={setOpen} modal={false}>
+      <BottomSheet open={open} onOpenChange={setOpen} modal={false} container={containerRef.current}>
         <BottomSheetTrigger asChild>
           <Button>Open Bottom Sheet</Button>
         </BottomSheetTrigger>
-        <BottomSheetContent onClose={() => setOpen(false)} container={containerRef.current}>
+        <BottomSheetContent>
           <BottomSheetHeader>
             <BottomSheetTitle>Sheet Title</BottomSheetTitle>
             <BottomSheetDescription>
@@ -39,19 +39,21 @@ export function BottomSheetPreview() {
         </BottomSheetContent>
       </BottomSheet>
 
-      <BottomSheet open={snappable} onOpenChange={setSnappable} modal={false}>
+      <BottomSheet
+        open={snappable}
+        onOpenChange={setSnappable}
+        modal={false}
+        container={containerRef.current}
+        detents={["25%", "50%", "85%"]}
+        defaultDetent={1}
+        onDetentChange={setSnapIndex}
+      >
         <BottomSheetTrigger asChild>
-          <Button variant="secondary">With Snap Points</Button>
+          <Button variant="secondary">With Detents</Button>
         </BottomSheetTrigger>
-        <BottomSheetContent
-          onClose={() => setSnappable(false)}
-          container={containerRef.current}
-          snapPoints={[0.25, 0.5, 0.85]}
-          defaultSnapPoint={1}
-          onSnapPointChange={setSnapIndex}
-        >
+        <BottomSheetContent>
           <BottomSheetHeader>
-            <BottomSheetTitle>Snap Points</BottomSheetTitle>
+            <BottomSheetTitle>Detents (Snap Points)</BottomSheetTitle>
             <BottomSheetDescription>
               Snapped to: {["25%", "50%", "85%"][snapIndex]} of viewport
             </BottomSheetDescription>
@@ -63,7 +65,7 @@ export function BottomSheetPreview() {
             </p>
             <p className="text-sm text-muted-foreground">
               A fast swipe down will dismiss. A slow drag settles to the
-              nearest snap point, with velocity bias toward the direction
+              nearest detent, with velocity bias toward the direction
               you're dragging.
             </p>
             <Button onClick={() => setSnappable(false)}>Done</Button>
@@ -71,14 +73,11 @@ export function BottomSheetPreview() {
         </BottomSheetContent>
       </BottomSheet>
 
-      <BottomSheet open={nonModal} onOpenChange={setNonModal} modal={false}>
+      <BottomSheet open={nonModal} onOpenChange={setNonModal} modal={false} container={containerRef.current}>
         <BottomSheetTrigger asChild>
           <Button variant="outline">Non-modal (interact behind)</Button>
         </BottomSheetTrigger>
-        <BottomSheetContent
-          onClose={() => setNonModal(false)}
-          container={containerRef.current}
-        >
+        <BottomSheetContent>
           <BottomSheetHeader>
             <BottomSheetTitle>Non-modal Sheet</BottomSheetTitle>
             <BottomSheetDescription>

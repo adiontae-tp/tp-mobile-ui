@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from "fs";
 import { join, dirname, resolve } from "path";
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
-import { registry } from "./registry.js";
+import { registry, REGISTRY_VERSION } from "./registry.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const registryDir = join(__dirname, "..", "registry");
@@ -16,6 +16,21 @@ const cyan = (s) => `\x1b[36m${s}\x1b[0m`;
 const yellow = (s) => `\x1b[33m${s}\x1b[0m`;
 const dim = (s) => `\x1b[2m${s}\x1b[0m`;
 const red = (s) => `\x1b[31m${s}\x1b[0m`;
+
+// ── Version stamp ───────────────────────────────────────────────────────
+const VERSION_COMMENT = `// mobile-ui@${REGISTRY_VERSION}`;
+
+function stampVersion(content) {
+  // Add version comment as the first line
+  return VERSION_COMMENT + "\n" + content;
+}
+
+function getInstalledVersion(filePath) {
+  if (!existsSync(filePath)) return null;
+  const firstLine = readFileSync(filePath, "utf-8").split("\n")[0];
+  const match = firstLine.match(/^\/\/ mobile-ui@(.+)$/);
+  return match ? match[1] : null;
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 function detectPackageManager() {
@@ -61,7 +76,6 @@ function ensureDir(dir) {
 }
 
 function resolveComponentsDir() {
-  // Look for src/ directory
   const cwd = process.cwd();
   const srcDir = join(cwd, "src");
   if (existsSync(srcDir)) {
@@ -77,6 +91,53 @@ function resolveLibDir() {
     return join(srcDir, "lib");
   }
   return join(cwd, "lib");
+}
+
+/**
+ * Copy a component from registry to the destination, stamping with version.
+ * Handles both single files and directories (e.g. navigation/).
+ */
+function copyComponent(name, entry, componentsDir) {
+  const isDir = entry.file.endsWith("/");
+
+  if (isDir) {
+    const srcDir = join(registryDir, "ui", entry.file);
+    const destDir = join(componentsDir, entry.file);
+    ensureDir(destDir);
+
+    const files = readdirSync(srcDir);
+    for (const file of files) {
+      const content = readFileSync(join(srcDir, file), "utf-8");
+      writeFileSync(join(destDir, file), stampVersion(content));
+    }
+  } else {
+    const src = join(registryDir, "ui", entry.file);
+    const dest = join(componentsDir, entry.file);
+    const content = readFileSync(src, "utf-8");
+    writeFileSync(dest, stampVersion(content));
+  }
+}
+
+/**
+ * Check if a component exists in the user's project.
+ */
+function componentExists(entry, componentsDir) {
+  const isDir = entry.file.endsWith("/");
+  if (isDir) {
+    return existsSync(join(componentsDir, entry.file, "index.ts"));
+  }
+  return existsSync(join(componentsDir, entry.file));
+}
+
+/**
+ * Get the installed version of a component in the user's project.
+ */
+function getComponentVersion(entry, componentsDir) {
+  const isDir = entry.file.endsWith("/");
+  if (isDir) {
+    return getInstalledVersion(join(componentsDir, entry.file, "index.ts"));
+  }
+  return getInstalledVersion(join(componentsDir, entry.file));
 }
 
 // ── Commands ────────────────────────────────────────────────────────────
@@ -109,7 +170,6 @@ function cmdInit() {
   const cssSource = join(registryDir, "app.css");
   if (existsSync(cssSource)) {
     const cssDest = resolve(componentsDir, "..", "..", "app.css");
-    // Check if user has a main css file
     const possibleCss = ["app.css", "globals.css", "index.css"].map((f) =>
       join(dirname(componentsDir), "..", f)
     );
@@ -192,14 +252,12 @@ function cmdAdd(componentNames) {
 
   for (const name of toInstall) {
     const entry = registry[name];
-    const src = join(registryDir, "ui", entry.file);
-    const dest = join(componentsDir, entry.file);
 
-    if (existsSync(dest)) {
+    if (componentExists(entry, componentsDir)) {
       skipped.push(name);
       console.log(yellow("  ○") + ` ${entry.file} already exists, skipping`);
     } else {
-      copyFileSync(src, dest);
+      copyComponent(name, entry, componentsDir);
       added.push(name);
       console.log(green("  ✓") + ` Added ${entry.file}`);
     }
@@ -224,6 +282,7 @@ function cmdAdd(componentNames) {
   }
   if (skipped.length > 0) {
     console.log(dim(`  Skipped ${skipped.length} existing: ${skipped.join(", ")}`));
+    console.log(dim(`  Use `) + cyan("npx mobile-ui update") + dim(" to update existing components."));
   }
 
   // Show internal deps that were auto-added
@@ -236,27 +295,134 @@ function cmdAdd(componentNames) {
   console.log("  Import with:");
   for (const name of added) {
     const entry = registry[name];
-    const importName = entry.file.replace(".tsx", "");
+    const importName = entry.file.replace(".tsx", "").replace("/", "");
     console.log(cyan(`    import { ... } from "@/components/ui/${importName}"`));
+  }
+  console.log();
+}
+
+function cmdUpdate(componentNames) {
+  const componentsDir = resolveComponentsDir();
+  const libDir = resolveLibDir();
+
+  // If no names given, find all installed components that are outdated
+  if (componentNames.length === 0) {
+    componentNames = Object.keys(registry).filter((name) => {
+      const entry = registry[name];
+      return componentExists(entry, componentsDir);
+    });
+  }
+
+  // Validate
+  for (const name of componentNames) {
+    if (!registry[name]) {
+      console.log(red(`  Error:`) + ` Unknown component "${name}".`);
+      process.exit(1);
+    }
+  }
+
+  // Resolve dependencies
+  const toUpdate = new Set();
+  const queue = [...componentNames];
+
+  while (queue.length > 0) {
+    const name = queue.pop();
+    if (toUpdate.has(name)) continue;
+
+    const entry = registry[name];
+    if (!componentExists(entry, componentsDir)) continue; // Skip deps that aren't installed
+
+    toUpdate.add(name);
+    for (const dep of entry.internalDeps) {
+      if (!toUpdate.has(dep) && componentExists(registry[dep], componentsDir)) {
+        queue.push(dep);
+      }
+    }
+  }
+
+  if (toUpdate.size === 0) {
+    console.log();
+    console.log(dim("  No installed components found to update."));
+    console.log();
+    return;
+  }
+
+  console.log();
+  console.log(bold("  mobile-ui update"));
+  console.log();
+
+  const updated = [];
+  const upToDate = [];
+  const allDeps = new Set();
+
+  for (const name of toUpdate) {
+    const entry = registry[name];
+    const installedVersion = getComponentVersion(entry, componentsDir);
+
+    if (installedVersion === REGISTRY_VERSION) {
+      upToDate.push(name);
+      console.log(dim(`  ○ ${entry.file} is up to date (${REGISTRY_VERSION})`));
+    } else {
+      copyComponent(name, entry, componentsDir);
+      updated.push(name);
+      const from = installedVersion || "unknown";
+      console.log(green("  ✓") + ` Updated ${entry.file} (${from} → ${REGISTRY_VERSION})`);
+    }
+
+    for (const dep of entry.dependencies) {
+      allDeps.add(dep);
+    }
+  }
+
+  // Ensure any new deps are installed
+  console.log();
+  installDeps([...allDeps]);
+
+  // Also update utils.ts
+  ensureDir(libDir);
+  const utilsSrc = join(registryDir, "lib", "utils.ts");
+  const utilsDest = join(libDir, "utils.ts");
+  copyFileSync(utilsSrc, utilsDest);
+
+  // Summary
+  console.log();
+  if (updated.length > 0) {
+    console.log(green("  Done!") + ` Updated ${updated.length} component${updated.length > 1 ? "s" : ""} to v${REGISTRY_VERSION}.`);
+  } else {
+    console.log(green("  All components are up to date!") + dim(` (v${REGISTRY_VERSION})`));
   }
   console.log();
 }
 
 function cmdList() {
   console.log();
-  console.log(bold("  Available components:"));
+  console.log(bold("  Available components:") + dim(` (v${REGISTRY_VERSION})`));
   console.log();
 
+  const componentsDir = resolveComponentsDir();
   const maxLen = Math.max(...Object.keys(registry).map((k) => k.length));
 
   for (const [name, entry] of Object.entries(registry)) {
     const padded = name.padEnd(maxLen + 2);
-    console.log(`  ${cyan(padded)} ${dim(entry.description)}`);
+    const installed = componentExists(entry, componentsDir);
+    const version = installed ? getComponentVersion(entry, componentsDir) : null;
+
+    let status = "";
+    if (installed) {
+      if (version === REGISTRY_VERSION) {
+        status = green(" ✓");
+      } else {
+        status = yellow(` ↑ ${version || "?"} → ${REGISTRY_VERSION}`);
+      }
+    }
+
+    console.log(`  ${cyan(padded)} ${dim(entry.description)}${status}`);
   }
 
   console.log();
-  console.log("  Add with: " + cyan("npx mobile-ui add <name> [name...]"));
-  console.log("  Add all:  " + cyan("npx mobile-ui add --all"));
+  console.log("  Add with:    " + cyan("npx mobile-ui add <name> [name...]"));
+  console.log("  Update with: " + cyan("npx mobile-ui update [name...]"));
+  console.log("  Add all:     " + cyan("npx mobile-ui add --all"));
   console.log();
 }
 
@@ -266,14 +432,15 @@ function cmdAddAll() {
 
 function cmdHelp() {
   console.log();
-  console.log(bold("  mobile-ui") + dim(" — mobile-first React + Tailwind components"));
+  console.log(bold("  mobile-ui") + dim(` v${REGISTRY_VERSION}`) + dim(" — mobile-first React + Tailwind components"));
   console.log();
   console.log("  " + bold("Commands:"));
   console.log();
   console.log(`  ${cyan("init")}                   Set up your project (utils, theme, directories)`);
   console.log(`  ${cyan("add <name...>")}          Add components to your project`);
   console.log(`  ${cyan("add --all")}              Add all components`);
-  console.log(`  ${cyan("list")}                   Show available components`);
+  console.log(`  ${cyan("update [name...]")}       Update installed components to latest version`);
+  console.log(`  ${cyan("list")}                   Show available components (✓ installed, ↑ updatable)`);
   console.log(`  ${cyan("help")}                   Show this help message`);
   console.log();
   console.log("  " + bold("Examples:"));
@@ -281,6 +448,8 @@ function cmdHelp() {
   console.log(dim("    npx mobile-ui init"));
   console.log(dim("    npx mobile-ui add button card input"));
   console.log(dim("    npx mobile-ui add bottom-sheet"));
+  console.log(dim("    npx mobile-ui update              # update all installed"));
+  console.log(dim("    npx mobile-ui update button card   # update specific"));
   console.log(dim("    npx mobile-ui list"));
   console.log();
 }
@@ -299,6 +468,10 @@ switch (command) {
     } else {
       cmdAdd(args.slice(1));
     }
+    break;
+  case "update":
+  case "upgrade":
+    cmdUpdate(args.slice(1));
     break;
   case "list":
   case "ls":

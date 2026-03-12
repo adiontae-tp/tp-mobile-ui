@@ -96,17 +96,26 @@
   border-color: var(--border);
 }
 
+/*
+  Prevent pull-to-refresh on iOS Safari / Android Chrome.
+  Must be on html (the root scroller on iOS) AND body.
+  overscroll-behavior: none blocks the navigation gesture entirely;
+  contain prevents chaining to the browser chrome while keeping
+  normal scroll behavior within the page.
+*/
+html, body {
+  overscroll-behavior: none;
+  scrollbar-width: none;          /* Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;                   /* Chrome, Safari, Edge */
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  overflow: auto;
-  scrollbar-width: none;          /* Firefox */
-  /* Prevent pull-to-refresh on iOS/Android when dragging sheets */
-  overscroll-behavior-y: contain;
-}
-
-body::-webkit-scrollbar {
-  display: none;                   /* Chrome, Safari, Edge */
 }
 
 /* ── Mobile input fixes ──────────────────────────────────────────────── */

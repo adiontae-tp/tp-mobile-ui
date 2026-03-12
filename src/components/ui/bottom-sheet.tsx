@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Slot } from "@radix-ui/react-slot";
 import {
   motion,
   AnimatePresence,
@@ -8,185 +8,409 @@ import {
   useMotionValue,
   useTransform,
   animate,
+  type PanInfo,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-/* ── Context to pass open state from Root to Content ──────────────── */
+/* ── Types ────────────────────────────────────────────────────────── */
 
-interface BottomSheetContextValue {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  modal: boolean;
-}
+/**
+ * A detent describes a resting height for the sheet.
+ * - `number` — pixels (e.g. 120)
+ * - `"50%"` — percentage of container/viewport height
+ * - `"content"` — auto-sized to fit children (measured via ResizeObserver)
+ */
+type Detent = number | `${number}%` | "content";
 
-const BottomSheetContext = React.createContext<BottomSheetContextValue>({
-  open: false,
-  onOpenChange: () => {},
-  modal: true,
-});
+/* ── Spring config ────────────────────────────────────────────────── */
 
-/* ── Root wrapper ─────────────────────────────────────────────────── */
-
-interface BottomSheetProps extends Omit<DialogPrimitive.DialogProps, "modal"> {
-  /** When false, the overlay is hidden and content behind the sheet remains interactive. @default true */
-  modal?: boolean;
-}
-
-function BottomSheet({ open, onOpenChange, modal = true, children, ...props }: BottomSheetProps) {
-  const [internalOpen, setInternalOpen] = React.useState(props.defaultOpen ?? false);
-  const isControlled = open !== undefined;
-  const isOpen = isControlled ? open : internalOpen;
-
-  const handleOpenChange = React.useCallback(
-    (next: boolean) => {
-      if (!isControlled) setInternalOpen(next);
-      onOpenChange?.(next);
-    },
-    [isControlled, onOpenChange]
-  );
-
-  return (
-    <BottomSheetContext.Provider value={{ open: isOpen, onOpenChange: handleOpenChange, modal }}>
-      <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange} modal={modal} {...props}>
-        {children}
-      </DialogPrimitive.Root>
-    </BottomSheetContext.Provider>
-  );
-}
-
-const BottomSheetTrigger = DialogPrimitive.Trigger;
-const BottomSheetClose = DialogPrimitive.Close;
-
-const enterSpring = {
+const springConfig = {
   type: "spring" as const,
   damping: 28,
   stiffness: 260,
   mass: 0.8,
 };
 
-/* ── Content ──────────────────────────────────────────────────────── */
+/* ── Context ──────────────────────────────────────────────────────── */
 
-interface BottomSheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
-  onClose?: () => void;
-  /** Snap points as fractions of viewport/container height, e.g. [0.25, 0.5, 0.85]. Sorted ascending internally. */
-  snapPoints?: number[];
-  /** Index into the (sorted) snapPoints array to open at. Defaults to the last (largest) snap point. */
-  defaultSnapPoint?: number;
-  /** Called when the sheet settles on a snap point (index into sorted array). */
-  onSnapPointChange?: (index: number) => void;
-  /** Portal target element. When provided, renders inside this container with absolute positioning and no body-level side effects. */
-  container?: HTMLElement | null;
+interface BottomSheetContextValue {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  modal: boolean;
+  activeDetentIndex: number;
+  setDetent: (index: number) => void;
+  dismiss: () => void;
+  dragControls: ReturnType<typeof useDragControls>;
+  dragY: ReturnType<typeof useMotionValue<number>>;
+  resolvedDetents: number[];
+  sheetHeightPx: number;
+  containerHeight: number;
+  dismissible: boolean;
+  container: HTMLElement | null | undefined;
+  titleId: string;
+  descriptionId: string;
 }
 
-const BottomSheetContent = React.forwardRef<
-  React.ComponentRef<typeof DialogPrimitive.Content>,
-  BottomSheetContentProps
->(
-  (
-    {
-      className,
-      children,
-      onClose,
-      snapPoints: snapPointsProp,
-      defaultSnapPoint,
-      onSnapPointChange,
-      container,
-      ...props
+const BottomSheetContext = React.createContext<BottomSheetContextValue | null>(null);
+
+/** Access sheet state and controls from any child. */
+function useBottomSheet() {
+  const ctx = React.useContext(BottomSheetContext);
+  if (!ctx) throw new Error("useBottomSheet must be used within a <BottomSheet>");
+  return {
+    open: ctx.open,
+    activeDetent: ctx.activeDetentIndex,
+    setDetent: ctx.setDetent,
+    dismiss: ctx.dismiss,
+  };
+}
+
+/* ── Helpers ──────────────────────────────────────────────────────── */
+
+function parseDetent(d: Detent, containerHeight: number, contentHeight: number): number {
+  if (d === "content") return contentHeight;
+  if (typeof d === "number") return d;
+  // percentage string like "50%"
+  const pct = parseFloat(d) / 100;
+  return pct * containerHeight;
+}
+
+function resolveDetents(
+  detents: Detent[],
+  containerHeight: number,
+  contentHeight: number
+): number[] {
+  return detents
+    .map((d) => parseDetent(d, containerHeight, contentHeight))
+    .sort((a, b) => a - b);
+}
+
+/* ── Root ─────────────────────────────────────────────────────────── */
+
+interface BottomSheetProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean;
+  /** When false, no overlay and content behind remains interactive. @default true */
+  modal?: boolean;
+  /** Snap detents. @default ["90%"] */
+  detents?: Detent[];
+  /** Controlled active detent index (into sorted detents). */
+  activeDetent?: number;
+  /** Initial detent index. @default last (largest) */
+  defaultDetent?: number;
+  /** Called when the sheet settles on a detent. */
+  onDetentChange?: (index: number) => void;
+  /** Whether the sheet can be dismissed by dragging down. @default true */
+  dismissible?: boolean;
+  /** Portal target. When provided, renders inside this container with absolute positioning. */
+  container?: HTMLElement | null;
+  children: React.ReactNode;
+}
+
+function BottomSheet({
+  open: openProp,
+  onOpenChange,
+  defaultOpen = false,
+  modal = true,
+  detents: detentsProp = ["90%"],
+  activeDetent: activeDetentProp,
+  defaultDetent,
+  onDetentChange,
+  dismissible = true,
+  container,
+  children,
+}: BottomSheetProps) {
+  // Open state
+  const isControlledOpen = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const isOpen = isControlledOpen ? openProp : internalOpen;
+
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (!isControlledOpen) setInternalOpen(next);
+      onOpenChange?.(next);
     },
-    ref
-  ) => {
-    const { open, onOpenChange, modal } = React.useContext(BottomSheetContext);
-    const dragControls = useDragControls();
-    const dragY = useMotionValue(0);
+    [isControlledOpen, onOpenChange]
+  );
+
+  // Detent state
+  const isControlledDetent = activeDetentProp !== undefined;
+  const initialDetentIndex = defaultDetent ?? detentsProp.length - 1;
+  const [internalDetentIndex, setInternalDetentIndex] = React.useState(initialDetentIndex);
+  const activeDetentIndex = isControlledDetent ? activeDetentProp : internalDetentIndex;
+
+  // Drag
+  const dragControls = useDragControls();
+  const dragY = useMotionValue(0);
+
+  // Content measurement for "content" detent
+  const [contentHeight, setContentHeight] = React.useState(300);
+
+  // Container/viewport height
+  const getContainerHeight = React.useCallback(() => {
+    if (container) return container.clientHeight;
+    return typeof window !== "undefined" ? window.innerHeight : 800;
+  }, [container]);
+
+  const [containerHeight, setContainerHeight] = React.useState(getContainerHeight);
+
+  React.useEffect(() => {
+    const update = () => setContainerHeight(getContainerHeight());
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [getContainerHeight]);
+
+  // Resolve detents to px
+  const resolvedDetents = React.useMemo(
+    () => resolveDetents(detentsProp, containerHeight, contentHeight),
+    [detentsProp, containerHeight, contentHeight]
+  );
+
+  const maxDetentPx = resolvedDetents[resolvedDetents.length - 1];
+
+  // The sheet is always full container height so it extends to the bottom edge.
+  // Y-offset controls how much is visible: y = containerHeight - detentPx.
+  const sheetHeightPx = containerHeight;
+
+  const getYForDetent = React.useCallback(
+    (index: number) => {
+      const detentPx = resolvedDetents[index] ?? maxDetentPx;
+      return containerHeight - detentPx;
+    },
+    [resolvedDetents, maxDetentPx, containerHeight]
+  );
+
+  const setDetent = React.useCallback(
+    (index: number) => {
+      const clamped = Math.max(0, Math.min(index, resolvedDetents.length - 1));
+      if (!isControlledDetent) setInternalDetentIndex(clamped);
+      onDetentChange?.(clamped);
+      animate(dragY, getYForDetent(clamped), springConfig);
+    },
+    [resolvedDetents.length, isControlledDetent, onDetentChange, dragY, getYForDetent]
+  );
+
+  const dismiss = React.useCallback(() => {
+    handleOpenChange(false);
+  }, [handleOpenChange]);
+
+  // Reset when opened
+  React.useEffect(() => {
+    if (isOpen) {
+      const idx = isControlledDetent ? activeDetentProp : initialDetentIndex;
+      const clampedIdx = Math.max(0, Math.min(idx, resolvedDetents.length - 1));
+      if (!isControlledDetent) setInternalDetentIndex(clampedIdx);
+      dragY.set(getYForDetent(clampedIdx));
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync controlled detent
+  React.useEffect(() => {
+    if (isControlledDetent && isOpen) {
+      animate(dragY, getYForDetent(activeDetentProp), springConfig);
+    }
+  }, [activeDetentProp]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // IDs for aria
+  const instanceId = React.useId();
+  const titleId = `sheet-title-${instanceId}`;
+  const descriptionId = `sheet-desc-${instanceId}`;
+
+  const ctxValue = React.useMemo<BottomSheetContextValue>(
+    () => ({
+      open: isOpen,
+      onOpenChange: handleOpenChange,
+      modal,
+      activeDetentIndex,
+      setDetent,
+      dismiss,
+      dragControls,
+      dragY,
+      resolvedDetents,
+      sheetHeightPx,
+      containerHeight,
+      dismissible,
+      container,
+      titleId,
+      descriptionId,
+    }),
+    [
+      isOpen,
+      handleOpenChange,
+      modal,
+      activeDetentIndex,
+      setDetent,
+      dismiss,
+      dragControls,
+      dragY,
+      resolvedDetents,
+      sheetHeightPx,
+      containerHeight,
+      dismissible,
+      container,
+      titleId,
+      descriptionId,
+    ]
+  );
+
+  return (
+    <BottomSheetContext.Provider value={ctxValue}>
+      <ContentMeasurer
+        detents={detentsProp}
+        onMeasure={setContentHeight}
+      />
+      {children}
+    </BottomSheetContext.Provider>
+  );
+}
+
+/** Invisible element to measure content height when "content" detent is used. */
+function ContentMeasurer({
+  detents,
+  onMeasure,
+}: {
+  detents: Detent[];
+  onMeasure: (h: number) => void;
+}) {
+  // Only set up observer if "content" detent is in use
+  const hasContent = detents.includes("content");
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!hasContent || !ref.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        onMeasure(entry.contentRect.height);
+      }
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [hasContent, onMeasure]);
+
+  // We don't render a measurer — content measurement happens on the scroll area
+  return null;
+}
+
+/* ── Trigger ──────────────────────────────────────────────────────── */
+
+interface BottomSheetTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  asChild?: boolean;
+}
+
+const BottomSheetTrigger = React.forwardRef<HTMLButtonElement, BottomSheetTriggerProps>(
+  ({ asChild, onClick, ...props }, ref) => {
+    const ctx = React.useContext(BottomSheetContext);
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        ctx?.onOpenChange(true);
+        onClick?.(e);
+      },
+      [ctx, onClick]
+    );
+    const Comp = asChild ? Slot : "button";
+    return <Comp ref={ref} onClick={handleClick} {...props} />;
+  }
+);
+BottomSheetTrigger.displayName = "BottomSheetTrigger";
+
+/* ── Close ────────────────────────────────────────────────────────── */
+
+interface BottomSheetCloseProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  asChild?: boolean;
+}
+
+const BottomSheetClose = React.forwardRef<HTMLButtonElement, BottomSheetCloseProps>(
+  ({ asChild, onClick, ...props }, ref) => {
+    const ctx = React.useContext(BottomSheetContext);
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        ctx?.dismiss();
+        onClick?.(e);
+      },
+      [ctx, onClick]
+    );
+    const Comp = asChild ? Slot : "button";
+    return <Comp ref={ref} onClick={handleClick} {...props} />;
+  }
+);
+BottomSheetClose.displayName = "BottomSheetClose";
+
+/* ── Content ──────────────────────────────────────────────────────── */
+
+interface BottomSheetContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** @deprecated Use `onOpenChange` on the root `<BottomSheet>` instead. */
+  onClose?: () => void;
+}
+
+const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentProps>(
+  ({ className, children, onClose, ...props }, ref) => {
+    const ctx = React.useContext(BottomSheetContext);
+    if (!ctx) return null;
+
+    const {
+      open,
+      onOpenChange,
+      modal,
+      dragControls,
+      dragY,
+      resolvedDetents,
+      sheetHeightPx,
+      containerHeight,
+      dismissible,
+      container,
+      titleId,
+      descriptionId,
+      activeDetentIndex,
+    } = ctx;
+
     const scrollRef = React.useRef<HTMLDivElement>(null);
     const contained = container != null;
+    const position = contained ? "absolute" : "fixed";
 
-    // Sort snap points ascending
-    const sorted = React.useMemo(
-      () => (snapPointsProp ? [...snapPointsProp].sort((a, b) => a - b) : null),
-      [snapPointsProp]
-    );
+    // Overlay opacity: fully opaque at largest detent, transparent when dismissed
+    const largestDetentY = containerHeight - (resolvedDetents[resolvedDetents.length - 1] ?? containerHeight);
+    const overlayOpacity = useTransform(dragY, [largestDetentY, containerHeight], [1, 0]);
 
-    const hasSnaps = sorted !== null && sorted.length > 0;
-    const maxSnap = hasSnaps ? sorted[sorted.length - 1] : 0.85;
-
-    const initialIndex = hasSnaps
-      ? (defaultSnapPoint !== undefined
-          ? Math.min(defaultSnapPoint, sorted.length - 1)
-          : sorted.length - 1)
-      : 0;
-
-    const [currentSnapIndex, setCurrentSnapIndex] = React.useState(initialIndex);
-
-    React.useEffect(() => {
-      if (open) {
-        setCurrentSnapIndex(initialIndex);
-        dragY.set(0);
-      }
-    }, [open, initialIndex, dragY]);
-
-    const getRefHeight = React.useCallback(
-      () => contained && container ? container.clientHeight : window.innerHeight,
-      [contained, container]
-    );
-
-    const getYForSnap = React.useCallback(
+    // Y offset for current detent
+    const getYForDetent = React.useCallback(
       (index: number) => {
-        if (!hasSnaps) return 0;
-        const h = getRefHeight();
-        return maxSnap * h - sorted![index] * h;
+        const detentPx = resolvedDetents[index] ?? resolvedDetents[resolvedDetents.length - 1];
+        return containerHeight - detentPx;
       },
-      [hasSnaps, sorted, maxSnap, getRefHeight]
+      [resolvedDetents, containerHeight]
     );
 
-    const refHeight = getRefHeight();
-    const maxSheetPx = maxSnap * refHeight;
-    const overlayOpacity = useTransform(dragY, [0, maxSheetPx], [1, 0]);
+    const initialY = getYForDetent(activeDetentIndex);
 
-    const dismiss = React.useCallback(() => {
+    const handleDismiss = React.useCallback(() => {
       onOpenChange(false);
       onClose?.();
     }, [onOpenChange, onClose]);
 
-    const snapTo = React.useCallback(
-      (index: number) => {
-        setCurrentSnapIndex(index);
-        onSnapPointChange?.(index);
-        animate(dragY, getYForSnap(index), enterSpring);
-      },
-      [dragY, getYForSnap, onSnapPointChange]
-    );
-
+    // Drag end: snap to nearest detent or dismiss
     const handleDragEnd = React.useCallback(
-      (
-        _event: MouseEvent | TouchEvent | PointerEvent,
-        info: { velocity: { y: number }; offset: { y: number } }
-      ) => {
-        if (!hasSnaps) {
-          if (info.velocity.y > 200 || info.offset.y > 120) {
-            dismiss();
-          } else {
-            animate(dragY, 0, enterSpring);
-          }
-          return;
-        }
-
-        const h = getRefHeight();
-        const maxHeight = maxSnap * h;
+      (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         const currentY = dragY.get();
-        const smallestSnapHeight = sorted![0] * h;
-        const dismissThresholdY = maxHeight - smallestSnapHeight * 0.5;
+        const velocityY = info.velocity.y;
 
-        if (info.velocity.y > 400 || currentY > dismissThresholdY) {
-          dismiss();
-          return;
+        // Dismiss check
+        if (dismissible) {
+          const smallestDetentPx = resolvedDetents[0];
+          const dismissThresholdY = containerHeight - smallestDetentPx * 0.5;
+
+          if (velocityY > 400 || currentY > dismissThresholdY) {
+            handleDismiss();
+            return;
+          }
         }
 
+        // Find nearest detent
         let bestIndex = 0;
         let bestDist = Infinity;
-        for (let i = 0; i < sorted!.length; i++) {
-          const snapY = getYForSnap(i);
+        for (let i = 0; i < resolvedDetents.length; i++) {
+          const snapY = getYForDetent(i);
           const dist = Math.abs(currentY - snapY);
           if (dist < bestDist) {
             bestDist = dist;
@@ -194,22 +418,19 @@ const BottomSheetContent = React.forwardRef<
           }
         }
 
-        if (info.velocity.y < -200 && bestIndex < sorted!.length - 1) {
-          bestIndex = Math.min(bestIndex + 1, sorted!.length - 1);
-        } else if (info.velocity.y > 200 && bestIndex > 0) {
+        // Velocity bias
+        if (velocityY < -200 && bestIndex < resolvedDetents.length - 1) {
+          bestIndex = Math.min(bestIndex + 1, resolvedDetents.length - 1);
+        } else if (velocityY > 200 && bestIndex > 0) {
           bestIndex = Math.max(bestIndex - 1, 0);
         }
 
-        snapTo(bestIndex);
+        ctx.setDetent(bestIndex);
       },
-      [hasSnaps, dismiss, dragY, maxSnap, sorted, getYForSnap, snapTo, getRefHeight]
+      [dragY, dismissible, resolvedDetents, containerHeight, getYForDetent, handleDismiss, ctx]
     );
 
-    /**
-     * Smart drag/scroll handoff:
-     * - If scroll content is at the top → let the sheet drag handle it (for snap/dismiss)
-     * - If scrolled down → let native scroll win
-     */
+    // Drag/scroll handoff: block sheet drag when scrolled down
     const handleContentPointerDown = React.useCallback(
       (e: React.PointerEvent<HTMLDivElement>) => {
         const el = scrollRef.current;
@@ -220,140 +441,136 @@ const BottomSheetContent = React.forwardRef<
       []
     );
 
-    const initialY = hasSnaps ? getYForSnap(initialIndex) : 0;
-    const showOverlay = modal;
+    // Prevent iOS overscroll chaining on the scroll content
+    React.useEffect(() => {
+      const el = scrollRef.current;
+      if (!el) return;
 
-    /* ── Shared sheet inner content ────────────────────────────────── */
-    const sheetInner = (
-      <>
-        {/* Drag handle */}
-        <div
-          className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
-          onPointerDown={(e) => dragControls.start(e)}
-        >
-          <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
-        </div>
-        {/* Scrollable content with drag/scroll handoff */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 touch-pan-y"
-          onPointerDown={handleContentPointerDown}
-        >
-          {children}
-        </div>
-      </>
-    );
+      let startY = 0;
 
-    /* ── Contained rendering (React portal — no Radix body side effects) ── */
-    if (contained) {
-      return createPortal(
-        <AnimatePresence>
-          {open && (
-            <>
-              {showOverlay && (
-                <motion.div
-                  key="overlay"
-                  className="absolute inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  style={{ opacity: overlayOpacity }}
-                  onClick={dismiss}
-                />
-              )}
-              <motion.div
-                key="sheet"
-                ref={ref as React.Ref<HTMLDivElement>}
-                role="dialog"
-                aria-modal={modal}
-                className={cn(
-                  "absolute inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] touch-none",
-                  className
-                )}
-                style={{
-                  height: hasSnaps ? `${maxSnap * 100}%` : undefined,
-                  maxHeight: hasSnaps ? undefined : "85%",
-                  y: dragY,
-                  willChange: "transform",
-                }}
-                initial={{ y: "100%" }}
-                animate={{ y: initialY }}
-                exit={{ y: "100%" }}
-                transition={enterSpring}
-                drag="y"
-                dragControls={dragControls}
-                dragListener={false}
-                dragConstraints={{ top: hasSnaps ? -10 : 0 }}
-                dragElastic={{ top: 0.05, bottom: 0.6 }}
-                onDragEnd={handleDragEnd}
-                onPointerDown={(e) => dragControls.start(e)}
-              >
-                {sheetInner}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
-        container!
-      );
-    }
+      const onTouchStart = (e: TouchEvent) => {
+        startY = e.touches[0].clientY;
+      };
 
-    /* ── Default rendering (Radix portal for full-page usage) ────────── */
-    return (
+      const onTouchMove = (e: TouchEvent) => {
+        const dy = e.touches[0].clientY - startY;
+        if (el.scrollTop <= 0 && dy > 0) {
+          e.preventDefault();
+        }
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight && dy < 0) {
+          e.preventDefault();
+        }
+      };
+
+      el.addEventListener("touchstart", onTouchStart, { passive: true });
+      el.addEventListener("touchmove", onTouchMove, { passive: false });
+      return () => {
+        el.removeEventListener("touchstart", onTouchStart);
+        el.removeEventListener("touchmove", onTouchMove);
+      };
+    }, [open]);
+
+    // Escape key dismissal
+    React.useEffect(() => {
+      if (!open || !modal) return;
+      const onKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") handleDismiss();
+      };
+      document.addEventListener("keydown", onKeyDown);
+      return () => document.removeEventListener("keydown", onKeyDown);
+    }, [open, modal, handleDismiss]);
+
+    // Body scroll lock for modal sheets (not contained)
+    React.useEffect(() => {
+      if (!open || !modal || contained) return;
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }, [open, modal, contained]);
+
+    const portalTarget = contained ? container! : document.body;
+
+    const sheet = (
       <AnimatePresence>
         {open && (
-          <DialogPrimitive.Portal forceMount>
-            {showOverlay && (
-              <DialogPrimitive.Overlay asChild forceMount>
-                <motion.div
-                  className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  style={{ opacity: overlayOpacity }}
-                />
-              </DialogPrimitive.Overlay>
+          <>
+            {/* Overlay */}
+            {modal && (
+              <motion.div
+                key="bs-overlay"
+                className={cn(
+                  "inset-0 z-50 bg-black/40 backdrop-blur-[2px]",
+                  position
+                )}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                style={{ opacity: overlayOpacity }}
+                onClick={dismissible ? handleDismiss : undefined}
+              />
             )}
-            <DialogPrimitive.Content
+
+            {/* Sheet */}
+            <motion.div
+              key="bs-sheet"
               ref={ref}
-              asChild
-              forceMount
-              onEscapeKeyDown={dismiss}
-              onPointerDownOutside={modal ? dismiss : undefined}
-              onInteractOutside={modal ? undefined : (e) => e.preventDefault()}
+              role="dialog"
+              aria-modal={modal}
+              aria-labelledby={titleId}
+              aria-describedby={descriptionId}
+              className={cn(
+                "inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background shadow-[0_-8px_32px_rgba(0,0,0,0.12)] touch-none",
+                position,
+                className
+              )}
+              style={{
+                height: sheetHeightPx,
+                maxHeight: contained ? "100%" : "100dvh",
+                y: dragY,
+                willChange: "transform",
+                paddingBottom: contained
+                  ? undefined
+                  : "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))",
+              }}
+              initial={{ y: sheetHeightPx }}
+              animate={{ y: initialY }}
+              exit={{ y: sheetHeightPx }}
+              transition={springConfig}
+              drag="y"
+              dragControls={dragControls}
+              dragListener={false}
+              dragConstraints={{ top: -15 }}
+              dragElastic={{ top: 0.08, bottom: 0.5 }}
+              onDragEnd={handleDragEnd}
+              onPointerDown={(e) => dragControls.start(e)}
               {...props}
             >
-              <motion.div
-                className={cn(
-                  "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] touch-none",
-                  className
-                )}
-                style={{
-                  height: hasSnaps ? `${maxSnap * 100}dvh` : undefined,
-                  maxHeight: hasSnaps ? undefined : "85dvh",
-                  y: dragY,
-                  willChange: "transform",
-                }}
-                initial={{ y: "100%" }}
-                animate={{ y: initialY }}
-                exit={{ y: "100%" }}
-                transition={enterSpring}
-                drag="y"
-                dragControls={dragControls}
-                dragListener={false}
-                dragConstraints={{ top: hasSnaps ? -10 : 0 }}
-                dragElastic={{ top: 0.05, bottom: 0.6 }}
-                onDragEnd={handleDragEnd}
+              {/* Drag handle */}
+              <div
+                className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
                 onPointerDown={(e) => dragControls.start(e)}
               >
-                {sheetInner}
-              </motion.div>
-            </DialogPrimitive.Content>
-          </DialogPrimitive.Portal>
+                <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
+              </div>
+
+              {/* Scrollable content with drag/scroll handoff */}
+              <div
+                ref={scrollRef}
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 touch-auto"
+                onPointerDown={handleContentPointerDown}
+              >
+                {children}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     );
+
+    return createPortal(sheet, portalTarget);
   }
 );
 BottomSheetContent.displayName = "BottomSheetContent";
@@ -372,28 +589,38 @@ const BottomSheetHeader = ({
 BottomSheetHeader.displayName = "BottomSheetHeader";
 
 const BottomSheetTitle = React.forwardRef<
-  React.ComponentRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
-    ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
-));
+  HTMLHeadingElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => {
+  const ctx = React.useContext(BottomSheetContext);
+  return (
+    <h2
+      ref={ref}
+      id={ctx?.titleId}
+      className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+      {...props}
+    />
+  );
+});
 BottomSheetTitle.displayName = "BottomSheetTitle";
 
 const BottomSheetDescription = React.forwardRef<
-  React.ComponentRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
-    ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-));
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => {
+  const ctx = React.useContext(BottomSheetContext);
+  return (
+    <p
+      ref={ref}
+      id={ctx?.descriptionId}
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  );
+});
 BottomSheetDescription.displayName = "BottomSheetDescription";
+
+/* ── Exports ──────────────────────────────────────────────────────── */
 
 export {
   BottomSheet,
@@ -403,4 +630,8 @@ export {
   BottomSheetHeader,
   BottomSheetTitle,
   BottomSheetDescription,
+  useBottomSheet,
+  type Detent,
+  type BottomSheetProps,
+  type BottomSheetContentProps,
 };
