@@ -1,0 +1,10 @@
+{
+  "name": "mobile-ui-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the mobile-ui component library",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -42,6 +42,8 @@ const navSections = [
       { path: "/toast", label: "Toast" },
       { path: "/bottom-tabs", label: "Bottom Tabs" },
       { path: "/navigation", label: "Navigation" },
+      { path: "/view-switcher", label: "View Switcher" },
+      { path: "/toolbar-sheet", label: "Toolbar Sheet" },
     ],
   },
 ];

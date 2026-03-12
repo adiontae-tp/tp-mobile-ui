@@ -6,3 +6,4 @@ dist
 cli/dist
 cli/registry
 cli/node_modules
+mcp-server/node_modules

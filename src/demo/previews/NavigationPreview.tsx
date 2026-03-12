@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   StackNavigator,
   TabNavigator,
@@ -9,7 +8,7 @@ import {
 } from "@/components/ui/navigation";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
-import { Home, Search, User, Plus, ChevronLeft, X } from "lucide-react";
+import { Home, Search, User, Plus, X } from "lucide-react";
 
 /* ── Stack screens ───────────────────────────────────────────────── */
 
@@ -23,93 +22,63 @@ function FeedScreen() {
   ];
 
   return (
-    <div className="flex h-full flex-col">
-      <Header title="Feed" />
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <p className="text-sm text-muted-foreground mb-2">
-          Tap a card to push a detail screen. Swipe from left edge to go back (iOS).
-        </p>
-        {items.map((item) => (
-          <button
-            key={item.id}
-            className="flex w-full items-center gap-3 rounded-xl border p-3 text-left active:bg-accent"
-            onClick={() => push("detail", { id: item.id, title: item.title, color: item.color })}
-          >
-            <SharedElement id={`card-${item.id}`}>
-              <div className={`h-12 w-12 rounded-lg ${item.color}`} />
-            </SharedElement>
-            <div>
-              <p className="font-medium">{item.title}</p>
-              <p className="text-xs text-muted-foreground">Tap to view details</p>
-            </div>
-          </button>
-        ))}
-      </div>
+    <div className="flex h-full flex-col overflow-y-auto p-4 space-y-3">
+      <p className="text-sm text-muted-foreground mb-2">
+        Tap a card to push a detail screen. Swipe from left edge to go back (iOS).
+      </p>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          className="flex w-full items-center gap-3 rounded-xl border p-3 text-left active:bg-accent"
+          onClick={() => push("detail", { id: item.id, title: item.title, color: item.color })}
+        >
+          <SharedElement id={`card-${item.id}`}>
+            <div className={`h-12 w-12 rounded-lg ${item.color}`} />
+          </SharedElement>
+          <div>
+            <p className="font-medium">{item.title}</p>
+            <p className="text-xs text-muted-foreground">Tap to view details</p>
+          </div>
+        </button>
+      ))}
     </div>
   );
 }
 
 function DetailScreen() {
-  const { goBack, canGoBack, push } = useNavigation();
+  const { push } = useNavigation();
   const { params } = useRoute();
   const { id, title, color } = params as { id: string; title: string; color: string };
 
   return (
-    <div className="flex h-full flex-col">
-      <Header
-        title={title || "Detail"}
-        leftAction={
-          canGoBack() ? (
-            <button onClick={goBack} className="flex items-center gap-1 text-primary">
-              <ChevronLeft className="h-5 w-5" />
-              Back
-            </button>
-          ) : undefined
-        }
-      />
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <SharedElement id={`card-${id}`}>
-          <div className={`h-40 w-full rounded-xl ${color}`} />
-        </SharedElement>
-        <h2 className="text-xl font-bold">{title}</h2>
-        <p className="text-sm text-muted-foreground">
-          This screen was pushed onto the stack. You can go back by tapping the back button or
-          swiping from the left edge on iOS.
-        </p>
-        <Button onClick={() => push("nested", { from: title })} className="w-full">
-          Push another screen
-        </Button>
-      </div>
+    <div className="flex h-full flex-col overflow-y-auto p-4 space-y-4">
+      <SharedElement id={`card-${id}`}>
+        <div className={`h-40 w-full rounded-xl ${color}`} />
+      </SharedElement>
+      <h2 className="text-xl font-bold">{title}</h2>
+      <p className="text-sm text-muted-foreground">
+        This screen was pushed onto the stack. You can go back by tapping the back button or
+        swiping from the left edge on iOS.
+      </p>
+      <Button onClick={() => push("nested", { from: title })} className="w-full">
+        Push another screen
+      </Button>
     </div>
   );
 }
 
 function NestedScreen() {
-  const { goBack, canGoBack } = useNavigation();
   const { params } = useRoute();
 
   return (
-    <div className="flex h-full flex-col">
-      <Header
-        title="Nested"
-        leftAction={
-          canGoBack() ? (
-            <button onClick={goBack} className="flex items-center gap-1 text-primary">
-              <ChevronLeft className="h-5 w-5" />
-              Back
-            </button>
-          ) : undefined
-        }
-      />
-      <div className="flex-1 overflow-y-auto p-4">
-        <p className="text-sm text-muted-foreground">
-          Navigated from: <span className="font-medium text-foreground">{(params as { from: string }).from}</span>
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This is a deeply nested screen. The full stack is preserved — swipe back
-          multiple times to return to the feed.
-        </p>
-      </div>
+    <div className="flex h-full flex-col overflow-y-auto p-4">
+      <p className="text-sm text-muted-foreground">
+        Navigated from: <span className="font-medium text-foreground">{(params as { from: string }).from}</span>
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        This is a deeply nested screen. The full stack is preserved — swipe back
+        multiple times to return to the feed.
+      </p>
     </div>
   );
 }
@@ -203,9 +172,21 @@ export function NavigationPreview() {
         <TabNavigator initialTab="home">
           <TabNavigator.Tab name="home" icon={<Home />} label="Home">
             <StackNavigator initialRoute="feed">
-              <StackNavigator.Screen name="feed" component={FeedScreen} />
-              <StackNavigator.Screen name="detail" component={DetailScreen} />
-              <StackNavigator.Screen name="nested" component={NestedScreen} />
+              <StackNavigator.Screen
+                name="feed"
+                component={FeedScreen}
+                title="Feed"
+              />
+              <StackNavigator.Screen
+                name="detail"
+                component={DetailScreen}
+                title={(params) => (params.title as string) || "Detail"}
+              />
+              <StackNavigator.Screen
+                name="nested"
+                component={NestedScreen}
+                title="Nested"
+              />
             </StackNavigator>
           </TabNavigator.Tab>
           <TabNavigator.Tab name="search" icon={<Search />} label="Search">

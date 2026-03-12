@@ -23,6 +23,7 @@ const components = [
   { path: "/bottom-sheet", title: "Bottom Sheet", desc: "Draggable bottom panels." },
   { path: "/action-sheet", title: "Action Sheet", desc: "iOS-style action menus." },
   { path: "/toast", title: "Toast", desc: "Non-intrusive notifications." },
+  { path: "/toolbar-sheet", title: "Toolbar Sheet", desc: "Apple Maps-style persistent toolbar sheet." },
 ];
 
 export function HomePage() {

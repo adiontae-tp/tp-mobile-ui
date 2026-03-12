@@ -27,7 +27,7 @@ export function PhonePreview({ children, className }: PhonePreviewProps) {
           </div>
           {/* Screen — set CSS variable to simulate safe area for components */}
           <div
-            className="h-[538px] overflow-y-auto bg-background"
+            className="relative h-[538px] overflow-y-auto bg-background"
             style={{
               /* Override env() with real values inside the preview */
               ["--preview-safe-top" as string]: "52px",

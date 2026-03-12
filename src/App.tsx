@@ -21,6 +21,8 @@ import { ActionSheetDemo } from "@/demo/pages/ActionSheetDemo";
 import { ToastDemo } from "@/demo/pages/ToastDemo";
 import { BottomTabsDemo } from "@/demo/pages/BottomTabsDemo";
 import { NavigationDemo } from "@/demo/pages/NavigationDemo";
+import { ViewSwitcherDemo } from "@/demo/pages/ViewSwitcherDemo";
+import { ToolbarSheetDemo } from "@/demo/pages/ToolbarSheetDemo";
 
 // Mobile previews
 import { PreviewIndex } from "@/demo/pages/PreviewIndex";
@@ -40,6 +42,8 @@ import { ActionSheetPreview } from "@/demo/previews/ActionSheetPreview";
 import { ToastPreview } from "@/demo/previews/ToastPreview";
 import { BottomTabsPreview } from "@/demo/previews/BottomTabsPreview";
 import { NavigationPreview } from "@/demo/previews/NavigationPreview";
+import { ViewSwitcherPreview } from "@/demo/previews/ViewSwitcherPreview";
+import { ToolbarSheetPreview } from "@/demo/previews/ToolbarSheetPreview";
 
 function App() {
   return (
@@ -64,6 +68,8 @@ function App() {
           <Route path="toast" element={<ToastDemo />} />
           <Route path="bottom-tabs" element={<BottomTabsDemo />} />
           <Route path="navigation" element={<NavigationDemo />} />
+          <Route path="view-switcher" element={<ViewSwitcherDemo />} />
+          <Route path="toolbar-sheet" element={<ToolbarSheetDemo />} />
         </Route>
 
         {/* Mobile previews (full-screen, for phone testing) */}
@@ -85,6 +91,8 @@ function App() {
           <Route path="toast" element={<ToastPreview />} />
           <Route path="bottom-tabs" element={<BottomTabsPreview />} />
           <Route path="navigation" element={<NavigationPreview />} />
+          <Route path="view-switcher" element={<ViewSwitcherPreview />} />
+          <Route path="toolbar-sheet" element={<ToolbarSheetPreview />} />
         </Route>
       </Routes>
       <Toaster />

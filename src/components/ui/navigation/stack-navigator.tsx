@@ -7,6 +7,7 @@ import {
   type PanInfo,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ChevronLeft } from "lucide-react";
 import { detectPlatform } from "./platform";
 import { getStackVariants, getStackSpring, iosShadowVariants } from "./transitions";
 import {
@@ -26,12 +27,117 @@ import type {
 const EDGE_ZONE_WIDTH = 20;
 const SWIPE_DISMISS_THRESHOLD = 0.35;
 
+/* ── Title animation variants ────────────────────────────────────── */
+
+const titleVariants = {
+  enter: (direction: "forward" | "back") => ({
+    x: direction === "forward" ? 60 : -60,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: "forward" | "back") => ({
+    x: direction === "forward" ? -60 : 60,
+    opacity: 0,
+  }),
+};
+
+const backVariants = {
+  enter: { x: -20, opacity: 0 },
+  center: { x: 0, opacity: 1 },
+  exit: { x: -20, opacity: 0 },
+};
+
+const titleSpring = {
+  type: "spring" as const,
+  damping: 28,
+  stiffness: 260,
+  mass: 0.8,
+};
+
 /* ── StackNavigator.Screen (config-only, no render) ──────────────── */
 
 function Screen(_props: StackScreenProps) {
   return null;
 }
 Screen.displayName = "StackNavigator.Screen";
+
+/* ── StackHeader ─────────────────────────────────────────────────── */
+
+interface StackHeaderProps {
+  title: string;
+  routeKey: string;
+  direction: "forward" | "back";
+  canGoBack: boolean;
+  previousTitle: string;
+  onBack: () => void;
+  headerRight?: React.ReactNode;
+}
+
+function StackHeader({
+  title,
+  routeKey,
+  direction,
+  canGoBack,
+  previousTitle,
+  onBack,
+  headerRight,
+}: StackHeaderProps) {
+  return (
+    <header
+      className="relative z-50 border-b bg-background/80 backdrop-blur-lg"
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+    >
+      <div className="flex h-11 items-center justify-between px-4">
+        {/* Left: back button */}
+        <div className="flex min-w-[2.75rem] items-center">
+          <AnimatePresence mode="wait">
+            {canGoBack && (
+              <motion.button
+                key="back"
+                variants={backVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={titleSpring}
+                onClick={onBack}
+                className="flex items-center gap-0.5 text-primary"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-sm">{previousTitle || "Back"}</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Center: animated title */}
+        <div className="flex-1 overflow-hidden text-center">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.span
+              key={routeKey}
+              custom={direction}
+              variants={titleVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={titleSpring}
+              className="block truncate text-base font-semibold"
+            >
+              {title}
+            </motion.span>
+          </AnimatePresence>
+        </div>
+
+        {/* Right: optional actions */}
+        <div className="flex min-w-[2.75rem] items-center justify-end">
+          {headerRight}
+        </div>
+      </div>
+    </header>
+  );
+}
 
 /* ── StackNavigator ──────────────────────────────────────────────── */
 
@@ -52,8 +158,8 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
     const map = new Map<string, ScreenDefinition>();
     React.Children.forEach(children, (child) => {
       if (React.isValidElement(child) && child.type === Screen) {
-        const { name, component } = child.props as StackScreenProps;
-        map.set(name, { name, component });
+        const { name, component, title, headerRight, headerShown } = child.props as StackScreenProps;
+        map.set(name, { name, component, title, headerRight, headerShown });
       }
     });
     return map;
@@ -88,7 +194,6 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
   const dragX = useMotionValue(0);
   const bgX = useTransform(dragX, (v) => {
     const w = getWidth();
-    // Parallax: behind screen moves from -30% to 0% as drag progresses
     const progress = Math.max(0, v / w);
     return `${-30 + progress * 30}%`;
   });
@@ -109,12 +214,9 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
         isDragging.current = false;
         return;
       }
-
-      // Check if the gesture started inside the left-edge zone
       const rect = containerRef.current?.getBoundingClientRect();
       const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
       const relX = rect ? clientX - rect.left : clientX;
-
       if (relX > EDGE_ZONE_WIDTH + 20) {
         isDragging.current = false;
         return;
@@ -125,8 +227,7 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
   );
 
   const handleDrag = React.useCallback(
-    (_: unknown, info: PanInfo) => {
-      // If not a valid edge swipe, pin dragX to 0 so the screen doesn't move
+    (_: unknown, _info: PanInfo) => {
       if (!isDragging.current) {
         dragX.set(0);
       }
@@ -141,13 +242,10 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
         return;
       }
       isDragging.current = false;
-
       const w = getWidth();
       const threshold = w * SWIPE_DISMISS_THRESHOLD;
       if (info.offset.x > threshold || info.velocity.x > 400) {
         dispatch({ type: "POP" });
-      } else {
-        // Snap back — dragX will animate to 0 via dragConstraints
       }
     },
     [dragX, getWidth]
@@ -157,88 +255,119 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
   const belowRoute = state.routes.length > 1 ? state.routes[state.routes.length - 2] : null;
   const BelowComponent = belowRoute ? screens.get(belowRoute.name)?.component : null;
 
+  // Resolve header title from screen definition
+  const resolveTitle = React.useCallback(
+    (routeName: string, params?: Record<string, unknown>): string => {
+      const screen = screens.get(routeName);
+      if (!screen?.title) return routeName;
+      if (typeof screen.title === "function") return screen.title(params ?? {});
+      return screen.title;
+    },
+    [screens]
+  );
+
+  const currentScreen = screens.get(topRoute.name);
+  const headerShown = currentScreen?.headerShown !== false && currentScreen?.title !== undefined;
+  const currentTitle = resolveTitle(topRoute.name, topRoute.params);
+  const previousTitle = belowRoute ? resolveTitle(belowRoute.name, belowRoute.params) : "";
+
   return (
     <StackContext.Provider value={navigationValue}>
-      <div ref={containerRef} className={cn("relative h-full w-full overflow-hidden", className)}>
-        {/* Below screen (for iOS parallax during transitions and swipe-back) */}
-        {isIOS && BelowComponent && belowRoute && (
-          <motion.div
-            className="absolute inset-0"
-            style={{ x: bgX }}
-          >
-            <RouteContext.Provider
-              value={{
-                name: belowRoute.name,
-                key: belowRoute.key,
-                params: belowRoute.params ?? {},
-              }}
-            >
-              <BelowComponent />
-            </RouteContext.Provider>
-          </motion.div>
+      <div ref={containerRef} className={cn("relative flex h-full w-full flex-col overflow-hidden", className)}>
+        {/* Persistent header with animated title crossfade */}
+        {headerShown && (
+          <StackHeader
+            title={currentTitle}
+            routeKey={topRoute.key}
+            direction={state.direction}
+            canGoBack={state.routes.length > 1}
+            previousTitle={previousTitle}
+            onBack={() => dispatch({ type: "POP" })}
+            headerRight={currentScreen?.headerRight}
+          />
         )}
 
-        <AnimatePresence initial={false} custom={state.direction} mode="sync">
-          <motion.div
-            key={topRoute.key}
-            custom={state.direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={spring}
-            className="absolute inset-0 bg-background"
-            // iOS swipe-back drag
-            {...(isIOS && state.routes.length > 1
-              ? {
-                  drag: "x" as const,
-                  dragDirectionLock: true,
-                  dragConstraints: { left: 0, right: 0 },
-                  dragElastic: { left: 0, right: 1 },
-                  dragMomentum: false,
-                  onDragStart: handleDragStart,
-                  onDrag: handleDrag,
-                  onDragEnd: handleDragEnd,
-                  style: { x: dragX, touchAction: "pan-y" },
-                }
-              : {})}
-          >
-            {/* iOS edge shadow — GPU-composited via opacity only */}
-            {isIOS && (
-              <motion.div
-                className="pointer-events-none absolute inset-y-0 -left-6 w-6"
-                style={{ boxShadow: "4px 0 16px rgba(0,0,0,0.15)" }}
-                custom={state.direction}
-                variants={iosShadowVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={spring}
-              />
-            )}
-
-            <RouteContext.Provider
-              value={{
-                name: topRoute.name,
-                key: topRoute.key,
-                params: topRoute.params ?? {},
-              }}
+        {/* Screen area */}
+        <div className="relative flex-1 overflow-hidden">
+          {/* Below screen (for iOS parallax during transitions and swipe-back) */}
+          {isIOS && BelowComponent && belowRoute && (
+            <motion.div
+              className="absolute inset-0"
+              style={{ x: bgX }}
             >
-              {(() => {
-                const screen = screens.get(topRoute.name);
-                if (!screen) {
-                  return (
-                    <div className="flex h-full items-center justify-center text-muted-foreground">
-                      Screen &ldquo;{topRoute.name}&rdquo; not found
-                    </div>
-                  );
-                }
-                const Component = screen.component;
-                return <Component />;
-              })()}
-            </RouteContext.Provider>
-          </motion.div>
-        </AnimatePresence>
+              <RouteContext.Provider
+                value={{
+                  name: belowRoute.name,
+                  key: belowRoute.key,
+                  params: belowRoute.params ?? {},
+                }}
+              >
+                <BelowComponent />
+              </RouteContext.Provider>
+            </motion.div>
+          )}
+
+          <AnimatePresence initial={false} custom={state.direction} mode="sync">
+            <motion.div
+              key={topRoute.key}
+              custom={state.direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={spring}
+              className="absolute inset-0 bg-background"
+              {...(isIOS && state.routes.length > 1
+                ? {
+                    drag: "x" as const,
+                    dragDirectionLock: true,
+                    dragConstraints: { left: 0, right: 0 },
+                    dragElastic: { left: 0, right: 1 },
+                    dragMomentum: false,
+                    onDragStart: handleDragStart,
+                    onDrag: handleDrag,
+                    onDragEnd: handleDragEnd,
+                    style: { x: dragX, touchAction: "pan-y" },
+                  }
+                : {})}
+            >
+              {/* iOS edge shadow — GPU-composited via opacity only */}
+              {isIOS && (
+                <motion.div
+                  className="pointer-events-none absolute inset-y-0 -left-6 w-6"
+                  style={{ boxShadow: "4px 0 16px rgba(0,0,0,0.15)" }}
+                  custom={state.direction}
+                  variants={iosShadowVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={spring}
+                />
+              )}
+
+              <RouteContext.Provider
+                value={{
+                  name: topRoute.name,
+                  key: topRoute.key,
+                  params: topRoute.params ?? {},
+                }}
+              >
+                {(() => {
+                  const screen = screens.get(topRoute.name);
+                  if (!screen) {
+                    return (
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
+                        Screen &ldquo;{topRoute.name}&rdquo; not found
+                      </div>
+                    );
+                  }
+                  const Component = screen.component;
+                  return <Component />;
+                })()}
+              </RouteContext.Provider>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </StackContext.Provider>
   );

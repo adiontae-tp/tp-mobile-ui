@@ -17,6 +17,8 @@ const components = [
   { path: "toast", title: "Toast" },
   { path: "bottom-tabs", title: "Bottom Tabs" },
   { path: "navigation", title: "Navigation" },
+  { path: "view-switcher", title: "View Switcher" },
+  { path: "toolbar-sheet", title: "Toolbar Sheet" },
 ];
 
 export function PreviewIndex() {

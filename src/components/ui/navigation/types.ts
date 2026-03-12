@@ -39,11 +39,20 @@ export type ModalAction =
 export interface ScreenDefinition {
   name: string;
   component: React.ComponentType<Record<string, never>>;
+  title?: string | ((params: Record<string, unknown>) => string);
+  headerRight?: ReactNode;
+  headerShown?: boolean;
 }
 
 export interface StackScreenProps {
   name: string;
   component: React.ComponentType<Record<string, never>>;
+  /** Static title string, or a function receiving route params. */
+  title?: string | ((params: Record<string, unknown>) => string);
+  /** Content rendered on the right side of the header. */
+  headerRight?: ReactNode;
+  /** Set to false to hide the built-in header for this screen. Defaults to true. */
+  headerShown?: boolean;
 }
 
 export interface TabDefinition {
