@@ -9,8 +9,8 @@ export function FooterButtonsPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={containerRef} className="relative flex min-h-full flex-col" style={{ minHeight: 480 }}>
-      <div className="flex-1 p-4 space-y-4">
+    <div ref={containerRef} className="relative flex h-full flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Footer Buttons
         </p>

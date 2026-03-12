@@ -145,15 +145,17 @@ export function WeekCalendarPreview() {
   const events = useMemo(() => generateEvents(new Date()), []);
 
   return (
-    <div className="flex flex-col gap-1 p-3">
+    <div className="flex flex-col p-3">
       <WeekCalendar
         events={events}
         onDayPress={(day) =>
           alert(`Tapped: ${day.toLocaleDateString()}`)
         }
       >
-        <WeekCalendarStrip />
-        <WeekCalendarNav />
+        <div className="sticky top-0 z-10 flex flex-col gap-1 bg-background pb-1">
+          <WeekCalendarStrip />
+          <WeekCalendarNav />
+        </div>
         <WeekCalendarDayEvents
           onEventClick={(e) => alert(`Event: ${e.title}`)}
           onEventMenuClick={(e) => alert(`Menu: ${e.title}`)}

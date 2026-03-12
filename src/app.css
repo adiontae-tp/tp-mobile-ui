@@ -101,6 +101,8 @@ body {
     "Helvetica Neue", Arial, sans-serif;
   overflow: auto;
   scrollbar-width: none;          /* Firefox */
+  /* Prevent pull-to-refresh on iOS/Android when dragging sheets */
+  overscroll-behavior-y: contain;
 }
 
 body::-webkit-scrollbar {

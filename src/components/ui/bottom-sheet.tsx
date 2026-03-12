@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   motion,
@@ -63,11 +64,6 @@ const enterSpring = {
   mass: 0.8,
 };
 
-const exitTween = {
-  duration: 0.2,
-  ease: [0.32, 0, 0.67, 0] as const, // ease-in
-};
-
 /* ── Content ──────────────────────────────────────────────────────── */
 
 interface BottomSheetContentProps
@@ -103,8 +99,8 @@ const BottomSheetContent = React.forwardRef<
     const { open, onOpenChange, modal } = React.useContext(BottomSheetContext);
     const dragControls = useDragControls();
     const dragY = useMotionValue(0);
+    const scrollRef = React.useRef<HTMLDivElement>(null);
     const contained = container != null;
-    const pos = contained ? "absolute" : "fixed";
 
     // Sort snap points ascending
     const sorted = React.useMemo(
@@ -115,7 +111,6 @@ const BottomSheetContent = React.forwardRef<
     const hasSnaps = sorted !== null && sorted.length > 0;
     const maxSnap = hasSnaps ? sorted[sorted.length - 1] : 0.85;
 
-    // The initial snap index (default = largest)
     const initialIndex = hasSnaps
       ? (defaultSnapPoint !== undefined
           ? Math.min(defaultSnapPoint, sorted.length - 1)
@@ -124,7 +119,6 @@ const BottomSheetContent = React.forwardRef<
 
     const [currentSnapIndex, setCurrentSnapIndex] = React.useState(initialIndex);
 
-    // Reset snap index when sheet opens
     React.useEffect(() => {
       if (open) {
         setCurrentSnapIndex(initialIndex);
@@ -132,20 +126,21 @@ const BottomSheetContent = React.forwardRef<
       }
     }, [open, initialIndex, dragY]);
 
-    // Convert snap fractions to y-offsets (px from the fully-open position).
+    const getRefHeight = React.useCallback(
+      () => contained && container ? container.clientHeight : window.innerHeight,
+      [contained, container]
+    );
+
     const getYForSnap = React.useCallback(
       (index: number) => {
         if (!hasSnaps) return 0;
-        const h = contained && container ? container.clientHeight : window.innerHeight;
-        const maxHeight = maxSnap * h;
-        const targetHeight = sorted![index] * h;
-        return maxHeight - targetHeight;
+        const h = getRefHeight();
+        return maxSnap * h - sorted![index] * h;
       },
-      [hasSnaps, sorted, maxSnap, contained, container]
+      [hasSnaps, sorted, maxSnap, getRefHeight]
     );
 
-    // Overlay opacity tracks drag position
-    const refHeight = contained && container ? container.clientHeight : (typeof window !== "undefined" ? window.innerHeight : 800);
+    const refHeight = getRefHeight();
     const maxSheetPx = maxSnap * refHeight;
     const overlayOpacity = useTransform(dragY, [0, maxSheetPx], [1, 0]);
 
@@ -177,10 +172,9 @@ const BottomSheetContent = React.forwardRef<
           return;
         }
 
-        const h = contained && container ? container.clientHeight : window.innerHeight;
+        const h = getRefHeight();
         const maxHeight = maxSnap * h;
         const currentY = dragY.get();
-
         const smallestSnapHeight = sorted![0] * h;
         const dismissThresholdY = maxHeight - smallestSnapHeight * 0.5;
 
@@ -208,21 +202,58 @@ const BottomSheetContent = React.forwardRef<
 
         snapTo(bestIndex);
       },
-      [hasSnaps, dismiss, dragY, maxSnap, sorted, getYForSnap, snapTo, contained, container]
+      [hasSnaps, dismiss, dragY, maxSnap, sorted, getYForSnap, snapTo, getRefHeight]
+    );
+
+    /**
+     * Smart drag/scroll handoff:
+     * - If scroll content is at the top → let the sheet drag handle it (for snap/dismiss)
+     * - If scrolled down → let native scroll win
+     */
+    const handleContentPointerDown = React.useCallback(
+      (e: React.PointerEvent<HTMLDivElement>) => {
+        const el = scrollRef.current;
+        if (el && el.scrollTop > 0) {
+          e.stopPropagation();
+        }
+      },
+      []
     );
 
     const initialY = hasSnaps ? getYForSnap(initialIndex) : 0;
     const showOverlay = modal;
 
-    /* ── Contained rendering (no Radix portal — no body side effects) ── */
+    /* ── Shared sheet inner content ────────────────────────────────── */
+    const sheetInner = (
+      <>
+        {/* Drag handle */}
+        <div
+          className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
+        </div>
+        {/* Scrollable content with drag/scroll handoff */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 touch-pan-y"
+          onPointerDown={handleContentPointerDown}
+        >
+          {children}
+        </div>
+      </>
+    );
+
+    /* ── Contained rendering (React portal — no Radix body side effects) ── */
     if (contained) {
-      return (
+      return createPortal(
         <AnimatePresence>
           {open && (
             <>
               {showOverlay && (
                 <motion.div
-                  className={cn(pos, "inset-0 z-50 bg-black/40 backdrop-blur-[2px]")}
+                  key="overlay"
+                  className="absolute inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -232,12 +263,12 @@ const BottomSheetContent = React.forwardRef<
                 />
               )}
               <motion.div
+                key="sheet"
                 ref={ref as React.Ref<HTMLDivElement>}
                 role="dialog"
                 aria-modal={modal}
                 className={cn(
-                  pos,
-                  "inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
+                  "absolute inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] touch-none",
                   className
                 )}
                 style={{
@@ -249,26 +280,21 @@ const BottomSheetContent = React.forwardRef<
                 initial={{ y: "100%" }}
                 animate={{ y: initialY }}
                 exit={{ y: "100%" }}
-                transition={{ enter: enterSpring, exit: exitTween, ...enterSpring }}
+                transition={enterSpring}
                 drag="y"
                 dragControls={dragControls}
+                dragListener={false}
                 dragConstraints={{ top: hasSnaps ? -10 : 0 }}
                 dragElastic={{ top: 0.05, bottom: 0.6 }}
                 onDragEnd={handleDragEnd}
+                onPointerDown={(e) => dragControls.start(e)}
               >
-                <div
-                  className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
-                  onPointerDown={(e) => dragControls.start(e)}
-                >
-                  <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
-                </div>
-                <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-                  {children}
-                </div>
+                {sheetInner}
               </motion.div>
             </>
           )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        container!
       );
     }
 
@@ -300,7 +326,7 @@ const BottomSheetContent = React.forwardRef<
             >
               <motion.div
                 className={cn(
-                  "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
+                  "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] touch-none",
                   className
                 )}
                 style={{
@@ -312,22 +338,16 @@ const BottomSheetContent = React.forwardRef<
                 initial={{ y: "100%" }}
                 animate={{ y: initialY }}
                 exit={{ y: "100%" }}
-                transition={{ enter: enterSpring, exit: exitTween, ...enterSpring }}
+                transition={enterSpring}
                 drag="y"
                 dragControls={dragControls}
+                dragListener={false}
                 dragConstraints={{ top: hasSnaps ? -10 : 0 }}
                 dragElastic={{ top: 0.05, bottom: 0.6 }}
                 onDragEnd={handleDragEnd}
+                onPointerDown={(e) => dragControls.start(e)}
               >
-                <div
-                  className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
-                  onPointerDown={(e) => dragControls.start(e)}
-                >
-                  <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
-                </div>
-                <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-                  {children}
-                </div>
+                {sheetInner}
               </motion.div>
             </DialogPrimitive.Content>
           </DialogPrimitive.Portal>

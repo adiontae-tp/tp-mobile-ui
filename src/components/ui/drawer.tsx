@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -102,53 +103,48 @@ const DrawerContent = React.forwardRef<
 
   const isLeft = side === "left";
   const contained = container != null;
-  const pos = contained ? "absolute" : "fixed";
   const isPush = mode === "push";
 
-  const sheetEl = (
-    <motion.div
-      ref={ref as React.Ref<HTMLDivElement>}
-      role="dialog"
-      className={cn(
-        pos,
-        "inset-y-0 z-50 flex flex-col bg-background shadow-[0_0_24px_rgba(0,0,0,0.12)]",
-        isLeft ? "left-0" : "right-0",
-        className
-      )}
-      style={{ width, maxWidth: "85vw", willChange: "transform" }}
-      initial={{ x: isLeft ? "-100%" : "100%" }}
-      animate={{ x: 0 }}
-      exit={{ x: isLeft ? "-100%" : "100%" }}
-      transition={enterSpring}
-    >
-      <div className="flex-1 overflow-y-auto overscroll-contain">
-        {children}
-      </div>
-    </motion.div>
-  );
-
-  const overlayEl = !isPush ? (
-    <motion.div
-      className={cn(pos, "inset-0 z-50 bg-black/40 backdrop-blur-[2px]")}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      onClick={dismiss}
-    />
-  ) : null;
-
-  /* Contained: plain divs, no Radix portal (no body side effects) */
+  /* Contained: React portal into container (no Radix body side effects) */
   if (contained) {
-    return (
+    return createPortal(
       <AnimatePresence>
         {open && (
           <>
-            {overlayEl}
-            {sheetEl}
+            {!isPush && (
+              <motion.div
+                key="overlay"
+                className="absolute inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                onClick={dismiss}
+              />
+            )}
+            <motion.div
+              key="sheet"
+              ref={ref as React.Ref<HTMLDivElement>}
+              role="dialog"
+              className={cn(
+                "absolute inset-y-0 z-50 flex flex-col bg-background shadow-[0_0_24px_rgba(0,0,0,0.12)]",
+                isLeft ? "left-0" : "right-0",
+                className
+              )}
+              style={{ width, maxWidth: "85vw", willChange: "transform" }}
+              initial={{ x: isLeft ? "-100%" : "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: isLeft ? "-100%" : "100%" }}
+              transition={enterSpring}
+            >
+              <div className="flex-1 overflow-y-auto overscroll-contain">
+                {children}
+              </div>
+            </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      container!
     );
   }
 
@@ -157,9 +153,16 @@ const DrawerContent = React.forwardRef<
     <AnimatePresence>
       {open && (
         <DrawerPortal forceMount>
-          {overlayEl && (
+          {!isPush && (
             <DialogPrimitive.Overlay asChild forceMount>
-              {overlayEl}
+              <motion.div
+                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                onClick={dismiss}
+              />
             </DialogPrimitive.Overlay>
           )}
           <DialogPrimitive.Content
@@ -170,7 +173,22 @@ const DrawerContent = React.forwardRef<
             onPointerDownOutside={dismiss}
             {...props}
           >
-            {sheetEl}
+            <motion.div
+              className={cn(
+                "fixed inset-y-0 z-50 flex flex-col bg-background shadow-[0_0_24px_rgba(0,0,0,0.12)]",
+                isLeft ? "left-0" : "right-0",
+                className
+              )}
+              style={{ width, maxWidth: "85vw", willChange: "transform" }}
+              initial={{ x: isLeft ? "-100%" : "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: isLeft ? "-100%" : "100%" }}
+              transition={enterSpring}
+            >
+              <div className="flex-1 overflow-y-auto overscroll-contain">
+                {children}
+              </div>
+            </motion.div>
           </DialogPrimitive.Content>
         </DrawerPortal>
       )}
