@@ -115,19 +115,22 @@ function ModalNavigator({ children, className }: ModalNavigatorProps) {
   return (
     <ModalContext.Provider value={modalContextValue}>
       <div className={cn("relative h-full w-full", className)}>
-        {/* Main content behind modals — scales down when modal is presented */}
-        <motion.div
-          className="h-full w-full"
-          animate={
-            hasModals
-              ? { scale: 0.94, borderRadius: "12px" }
-              : { scale: 1, borderRadius: "0px" }
-          }
-          transition={modalSpring}
-          style={{ transformOrigin: "top center", overflow: "hidden" }}
+        {/* Main content behind modals — scales down when modal is presented.
+            borderRadius is set statically on the wrapper to avoid paint;
+            only scale (GPU-composited transform) is animated. */}
+        <div
+          className="h-full w-full overflow-hidden"
+          style={{ borderRadius: hasModals ? "12px" : "0px" }}
         >
-          {content}
-        </motion.div>
+          <motion.div
+            className="h-full w-full"
+            animate={hasModals ? { scale: 0.94 } : { scale: 1 }}
+            transition={modalSpring}
+            style={{ transformOrigin: "top center" }}
+          >
+            {content}
+          </motion.div>
+        </div>
 
         {/* Modal overlay stack */}
         <AnimatePresence>

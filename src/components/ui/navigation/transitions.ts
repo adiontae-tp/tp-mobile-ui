@@ -29,15 +29,23 @@ export const modalSpring: Transition = {
 export const iosStackVariants: Variants = {
   enter: (direction: "forward" | "back") => ({
     x: direction === "forward" ? "100%" : "-30%",
-    boxShadow: direction === "forward" ? "-8px 0 24px rgba(0,0,0,0.15)" : "none",
   }),
   center: {
     x: "0%",
-    boxShadow: "0px 0 0px rgba(0,0,0,0)",
   },
   exit: (direction: "forward" | "back") => ({
     x: direction === "forward" ? "-30%" : "100%",
-    boxShadow: direction === "back" ? "-8px 0 24px rgba(0,0,0,0.15)" : "none",
+  }),
+};
+
+/** Opacity values for the shadow overlay on the incoming screen (iOS only). */
+export const iosShadowVariants: Variants = {
+  enter: (direction: "forward" | "back") => ({
+    opacity: direction === "forward" ? 1 : 0,
+  }),
+  center: { opacity: 0 },
+  exit: (direction: "forward" | "back") => ({
+    opacity: direction === "back" ? 1 : 0,
   }),
 };
 
