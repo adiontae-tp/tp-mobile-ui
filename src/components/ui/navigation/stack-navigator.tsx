@@ -2,9 +2,9 @@ import * as React from "react";
 import {
   motion,
   AnimatePresence,
+  animate,
   useMotionValue,
   useTransform,
-  type PanInfo,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
@@ -190,65 +190,99 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
     []
   );
 
-  // iOS swipe-back gesture state
-  const dragX = useMotionValue(0);
-  const bgX = useTransform(dragX, (v) => {
-    const w = getWidth();
-    const progress = Math.max(0, v / w);
-    return `${-30 + progress * 30}%`;
-  });
+  // iOS swipe-back gesture state.
+  // The parallax layer is only rendered during active swipe to prevent
+  // the below-screen from bleeding through after push/pop transitions.
+  const swipeProgress = useMotionValue(0);
+  const bgX = useTransform(swipeProgress, [0, 1], ["-30%", "0%"]);
   const isDragging = React.useRef(false);
+  const [showParallax, setShowParallax] = React.useState(false);
 
-  // Reset dragX after a pop so the next screen doesn't inherit the offset
-  const prevRouteCount = React.useRef(state.routes.length);
-  React.useEffect(() => {
-    if (state.routes.length < prevRouteCount.current) {
-      dragX.set(0);
-    }
-    prevRouteCount.current = state.routes.length;
-  }, [state.routes.length, dragX]);
+  // Pointer-based swipe-back: track the gesture manually so that
+  // we never bind a MotionValue to style.x on the AnimatePresence
+  // screen (which would override its variant-based animations).
+  const pointerStart = React.useRef<{ x: number; y: number; id: number } | null>(null);
+  const swipeX = useMotionValue(0);
 
-  const handleDragStart = React.useCallback(
-    (e: PointerEvent | MouseEvent | TouchEvent) => {
-      if (!isIOS || state.routes.length <= 1) {
-        isDragging.current = false;
-        return;
-      }
+  const handleEdgePointerDown = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!isIOS || state.routes.length <= 1) return;
       const rect = containerRef.current?.getBoundingClientRect();
-      const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      const relX = rect ? clientX - rect.left : clientX;
-      if (relX > EDGE_ZONE_WIDTH + 20) {
-        isDragging.current = false;
-        return;
-      }
-      isDragging.current = true;
+      const relX = rect ? e.clientX - rect.left : e.clientX;
+      if (relX > EDGE_ZONE_WIDTH + 20) return;
+      pointerStart.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      isDragging.current = false; // not confirmed yet — wait for direction lock
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
     [isIOS, state.routes.length]
   );
 
-  const handleDrag = React.useCallback(
-    (_: unknown, _info: PanInfo) => {
+  const handlePointerMove = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!pointerStart.current || pointerStart.current.id !== e.pointerId) return;
+      const dx = e.clientX - pointerStart.current.x;
+      const dy = e.clientY - pointerStart.current.y;
+
+      // Direction lock: first significant movement decides axis
       if (!isDragging.current) {
-        dragX.set(0);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8) return; // too small to decide
+        if (Math.abs(dy) > Math.abs(dx)) {
+          // Vertical — cancel swipe, let scroll happen
+          pointerStart.current = null;
+          return;
+        }
+        isDragging.current = true;
+        setShowParallax(true);
       }
+
+      const offset = Math.max(0, dx);
+      swipeX.set(offset);
+      const w = getWidth();
+      swipeProgress.set(Math.max(0, offset / w));
     },
-    [dragX]
+    [getWidth, swipeProgress, swipeX]
   );
 
-  const handleDragEnd = React.useCallback(
-    (_: unknown, info: PanInfo) => {
-      if (!isDragging.current) {
-        dragX.set(0);
+  const handlePointerUp = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!pointerStart.current || pointerStart.current.id !== e.pointerId) return;
+      const wasActive = isDragging.current;
+      const dx = e.clientX - pointerStart.current.x;
+      pointerStart.current = null;
+      isDragging.current = false;
+
+      if (!wasActive) {
+        setShowParallax(false);
         return;
       }
-      isDragging.current = false;
+
       const w = getWidth();
-      const threshold = w * SWIPE_DISMISS_THRESHOLD;
-      if (info.offset.x > threshold || info.velocity.x > 400) {
+      if (dx > w * SWIPE_DISMISS_THRESHOLD) {
+        animate(swipeProgress, 1, spring);
+        animate(swipeX, w, spring).then(() => {
+          setShowParallax(false);
+          swipeX.jump(0);
+          swipeProgress.jump(0);
+        });
         dispatch({ type: "POP" });
+      } else {
+        animate(swipeX, 0, spring);
+        animate(swipeProgress, 0, spring).then(() => setShowParallax(false));
       }
     },
-    [dragX, getWidth]
+    [getWidth, swipeProgress, swipeX, spring]
+  );
+
+  const handlePointerCancel = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (!pointerStart.current || pointerStart.current.id !== e.pointerId) return;
+      pointerStart.current = null;
+      isDragging.current = false;
+      animate(swipeX, 0, spring);
+      animate(swipeProgress, 0, spring).then(() => setShowParallax(false));
+    },
+    [swipeProgress, swipeX, spring]
   );
 
   const topRoute = state.routes[state.routes.length - 1];
@@ -288,9 +322,17 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
         )}
 
         {/* Screen area */}
-        <div className="relative flex-1 overflow-hidden">
-          {/* Below screen (for iOS parallax during transitions and swipe-back) */}
-          {isIOS && BelowComponent && belowRoute && (
+        <div
+          className="relative flex-1 overflow-hidden"
+          onPointerDown={handleEdgePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          style={{ touchAction: isIOS ? "pan-y" : undefined }}
+        >
+          {/* Below screen (iOS parallax) — only rendered during active swipe
+              so it can never bleed through after push/pop transitions. */}
+          {isIOS && showParallax && BelowComponent && belowRoute && (
             <motion.div
               className="absolute inset-0"
               style={{ x: bgX }}
@@ -317,19 +359,6 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
               exit="exit"
               transition={spring}
               className="absolute inset-0 bg-background"
-              {...(isIOS && state.routes.length > 1
-                ? {
-                    drag: "x" as const,
-                    dragDirectionLock: true,
-                    dragConstraints: { left: 0, right: 0 },
-                    dragElastic: { left: 0, right: 1 },
-                    dragMomentum: false,
-                    onDragStart: handleDragStart,
-                    onDrag: handleDrag,
-                    onDragEnd: handleDragEnd,
-                    style: { x: dragX, touchAction: "pan-y" },
-                  }
-                : {})}
             >
               {/* iOS edge shadow — GPU-composited via opacity only */}
               {isIOS && (
@@ -367,6 +396,32 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
               </RouteContext.Provider>
             </motion.div>
           </AnimatePresence>
+
+          {/* Swipe-back overlay: sits on top of AnimatePresence and
+              shifts the visible screen during an active gesture. This is
+              a separate layer so it NEVER interferes with variant
+              enter/exit animations. */}
+          {showParallax && (
+            <motion.div
+              className="absolute inset-0 bg-background"
+              style={{ x: swipeX }}
+            >
+              <RouteContext.Provider
+                value={{
+                  name: topRoute.name,
+                  key: topRoute.key,
+                  params: topRoute.params ?? {},
+                }}
+              >
+                {(() => {
+                  const screen = screens.get(topRoute.name);
+                  if (!screen) return null;
+                  const Component = screen.component;
+                  return <Component />;
+                })()}
+              </RouteContext.Provider>
+            </motion.div>
+          )}
         </div>
       </div>
     </StackContext.Provider>

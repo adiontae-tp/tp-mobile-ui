@@ -1,37 +1,80 @@
 import { Link } from "react-router-dom";
 
-const components = [
-  { path: "button", title: "Button" },
-  { path: "text", title: "Text" },
-  { path: "input", title: "Input" },
-  { path: "card", title: "Card" },
-  { path: "badge", title: "Badge" },
-  { path: "avatar", title: "Avatar" },
-  { path: "separator", title: "Separator" },
-  { path: "switch", title: "Switch" },
-  { path: "checkbox", title: "Checkbox" },
-  { path: "tabs", title: "Tabs" },
-  { path: "header", title: "Header" },
-  { path: "bottom-sheet", title: "Bottom Sheet" },
-  { path: "action-sheet", title: "Action Sheet" },
-  { path: "toast", title: "Toast" },
-  { path: "bottom-tabs", title: "Bottom Tabs" },
-  { path: "navigation", title: "Navigation" },
-  { path: "view-switcher", title: "View Switcher" },
-  { path: "toolbar-sheet", title: "Toolbar Sheet" },
+const sections = [
+  {
+    title: "Core",
+    items: [
+      { path: "button", title: "Button" },
+      { path: "text", title: "Text" },
+      { path: "input", title: "Input" },
+      { path: "separator", title: "Separator" },
+    ],
+  },
+  {
+    title: "Display",
+    items: [
+      { path: "card", title: "Card" },
+      { path: "list", title: "List" },
+      { path: "badge", title: "Badge" },
+      { path: "avatar", title: "Avatar" },
+    ],
+  },
+  {
+    title: "Form",
+    items: [
+      { path: "switch", title: "Switch" },
+      { path: "checkbox", title: "Checkbox" },
+    ],
+  },
+  {
+    title: "Navigation",
+    items: [
+      { path: "header", title: "Header" },
+      { path: "tabs", title: "Tabs" },
+      { path: "bottom-tabs", title: "Bottom Tabs" },
+      { path: "drawer", title: "Drawer" },
+      { path: "navigation", title: "Navigation" },
+    ],
+  },
+  {
+    title: "Overlays",
+    items: [
+      { path: "bottom-sheet", title: "Bottom Sheet" },
+      { path: "action-sheet", title: "Action Sheet" },
+      { path: "toast", title: "Toast" },
+      { path: "toolbar-sheet", title: "Toolbar Sheet" },
+    ],
+  },
+  {
+    title: "Layout",
+    items: [
+      { path: "footer-buttons", title: "Footer Buttons" },
+      { path: "view-switcher", title: "View Switcher" },
+      { path: "week-calendar", title: "Week Calendar" },
+    ],
+  },
 ];
 
 export function PreviewIndex() {
   return (
     <div className="flex flex-col">
-      {components.map((c) => (
-        <Link
-          key={c.path}
-          to={c.path}
-          className="flex min-h-touch items-center border-b px-4 text-sm font-medium active:bg-accent"
-        >
-          {c.title}
-        </Link>
+      {sections.map((section) => (
+        <div key={section.title}>
+          <div className="px-4 pt-4 pb-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {section.title}
+            </span>
+          </div>
+          {section.items.map((c) => (
+            <Link
+              key={c.path}
+              to={c.path}
+              className="flex min-h-touch items-center border-b px-4 text-sm font-medium active:bg-accent"
+            >
+              {c.title}
+            </Link>
+          ))}
+        </div>
       ))}
     </div>
   );

@@ -25,6 +25,13 @@ interface BottomTabsProps extends React.HTMLAttributes<HTMLDivElement> {
   defaultValue?: string;
 }
 
+/**
+ * Root container. Uses a flex-column layout that fills its parent:
+ * content panels grow to fill available space above the tab bar.
+ *
+ * Set a height on this element (e.g. `h-dvh`, `h-full`, or a fixed height)
+ * so the bar stays pinned to the bottom.
+ */
 function BottomTabs({
   value,
   onValueChange,
@@ -49,7 +56,7 @@ function BottomTabs({
     <BottomTabsContext.Provider
       value={{ value: activeValue, onValueChange: handleChange }}
     >
-      <div className={cn("flex flex-col", className)} {...props}>
+      <div className={cn("flex h-full flex-col", className)} {...props}>
         {children}
       </div>
     </BottomTabsContext.Provider>
@@ -57,7 +64,7 @@ function BottomTabs({
 }
 BottomTabs.displayName = "BottomTabs";
 
-/* ── Bar (fixed bottom container) ─────────────────────────────────── */
+/* ── Bar (bottom tab bar) ─────────────────────────────────────────── */
 
 const BottomTabsBar = React.forwardRef<
   HTMLDivElement,
@@ -67,7 +74,8 @@ const BottomTabsBar = React.forwardRef<
     ref={ref}
     role="tablist"
     className={cn(
-      "fixed inset-x-0 bottom-0 z-40 flex items-end justify-around border-t bg-background/80 backdrop-blur-xl pb-safe-bottom",
+      "flex shrink-0 items-end justify-around border-t bg-background/80 backdrop-blur-xl",
+      "pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))]",
       className
     )}
     {...props}
@@ -94,7 +102,7 @@ function BottomTabsContent({
   return (
     <div
       role="tabpanel"
-      className={cn("flex-1 overflow-y-auto", className)}
+      className={cn("min-h-0 flex-1 overflow-y-auto", className)}
       {...props}
     >
       {children}

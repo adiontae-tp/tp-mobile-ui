@@ -11,7 +11,7 @@ export function BottomTabsPreview() {
   const [tab, setTab] = useState("home");
 
   return (
-    <BottomTabs value={tab} onValueChange={setTab} className="h-[480px]">
+    <BottomTabs value={tab} onValueChange={setTab} className="h-full">
       <BottomTabsContent value="home" className="p-4">
         <p className="text-lg font-semibold">Home</p>
         <p className="mt-1 text-sm text-muted-foreground">

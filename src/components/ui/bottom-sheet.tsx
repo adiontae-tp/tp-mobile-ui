@@ -15,19 +15,23 @@ import { cn } from "@/lib/utils";
 interface BottomSheetContextValue {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  modal: boolean;
 }
 
 const BottomSheetContext = React.createContext<BottomSheetContextValue>({
   open: false,
   onOpenChange: () => {},
+  modal: true,
 });
 
 /* ── Root wrapper ─────────────────────────────────────────────────── */
 
-interface BottomSheetProps extends DialogPrimitive.DialogProps {}
+interface BottomSheetProps extends Omit<DialogPrimitive.DialogProps, "modal"> {
+  /** When false, the overlay is hidden and content behind the sheet remains interactive. @default true */
+  modal?: boolean;
+}
 
-function BottomSheet({ open, onOpenChange, children, ...props }: BottomSheetProps) {
-  // For uncontrolled usage, track internal state
+function BottomSheet({ open, onOpenChange, modal = true, children, ...props }: BottomSheetProps) {
   const [internalOpen, setInternalOpen] = React.useState(props.defaultOpen ?? false);
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
@@ -41,8 +45,8 @@ function BottomSheet({ open, onOpenChange, children, ...props }: BottomSheetProp
   );
 
   return (
-    <BottomSheetContext.Provider value={{ open: isOpen, onOpenChange: handleOpenChange }}>
-      <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange} {...props}>
+    <BottomSheetContext.Provider value={{ open: isOpen, onOpenChange: handleOpenChange, modal }}>
+      <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange} modal={modal} {...props}>
         {children}
       </DialogPrimitive.Root>
     </BottomSheetContext.Provider>
@@ -51,13 +55,17 @@ function BottomSheet({ open, onOpenChange, children, ...props }: BottomSheetProp
 
 const BottomSheetTrigger = DialogPrimitive.Trigger;
 const BottomSheetClose = DialogPrimitive.Close;
-const BottomSheetPortal = DialogPrimitive.Portal;
 
-const springConfig = {
+const enterSpring = {
   type: "spring" as const,
   damping: 28,
   stiffness: 260,
   mass: 0.8,
+};
+
+const exitTween = {
+  duration: 0.2,
+  ease: [0.32, 0, 0.67, 0] as const, // ease-in
 };
 
 /* ── Content ──────────────────────────────────────────────────────── */
@@ -65,12 +73,14 @@ const springConfig = {
 interface BottomSheetContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   onClose?: () => void;
-  /** Snap points as fractions of viewport height, e.g. [0.25, 0.5, 0.85]. Sorted ascending internally. */
+  /** Snap points as fractions of viewport/container height, e.g. [0.25, 0.5, 0.85]. Sorted ascending internally. */
   snapPoints?: number[];
   /** Index into the (sorted) snapPoints array to open at. Defaults to the last (largest) snap point. */
   defaultSnapPoint?: number;
   /** Called when the sheet settles on a snap point (index into sorted array). */
   onSnapPointChange?: (index: number) => void;
+  /** Portal target element. When provided, renders inside this container with absolute positioning and no body-level side effects. */
+  container?: HTMLElement | null;
 }
 
 const BottomSheetContent = React.forwardRef<
@@ -85,13 +95,16 @@ const BottomSheetContent = React.forwardRef<
       snapPoints: snapPointsProp,
       defaultSnapPoint,
       onSnapPointChange,
+      container,
       ...props
     },
     ref
   ) => {
-    const { open, onOpenChange } = React.useContext(BottomSheetContext);
+    const { open, onOpenChange, modal } = React.useContext(BottomSheetContext);
     const dragControls = useDragControls();
     const dragY = useMotionValue(0);
+    const contained = container != null;
+    const pos = contained ? "absolute" : "fixed";
 
     // Sort snap points ascending
     const sorted = React.useMemo(
@@ -123,16 +136,17 @@ const BottomSheetContent = React.forwardRef<
     const getYForSnap = React.useCallback(
       (index: number) => {
         if (!hasSnaps) return 0;
-        const vh = window.innerHeight;
-        const maxHeight = maxSnap * vh;
-        const targetHeight = sorted![index] * vh;
+        const h = contained && container ? container.clientHeight : window.innerHeight;
+        const maxHeight = maxSnap * h;
+        const targetHeight = sorted![index] * h;
         return maxHeight - targetHeight;
       },
-      [hasSnaps, sorted, maxSnap]
+      [hasSnaps, sorted, maxSnap, contained, container]
     );
 
     // Overlay opacity tracks drag position
-    const maxSheetPx = maxSnap * (typeof window !== "undefined" ? window.innerHeight : 800);
+    const refHeight = contained && container ? container.clientHeight : (typeof window !== "undefined" ? window.innerHeight : 800);
+    const maxSheetPx = maxSnap * refHeight;
     const overlayOpacity = useTransform(dragY, [0, maxSheetPx], [1, 0]);
 
     const dismiss = React.useCallback(() => {
@@ -144,7 +158,7 @@ const BottomSheetContent = React.forwardRef<
       (index: number) => {
         setCurrentSnapIndex(index);
         onSnapPointChange?.(index);
-        animate(dragY, getYForSnap(index), springConfig);
+        animate(dragY, getYForSnap(index), enterSpring);
       },
       [dragY, getYForSnap, onSnapPointChange]
     );
@@ -158,17 +172,16 @@ const BottomSheetContent = React.forwardRef<
           if (info.velocity.y > 200 || info.offset.y > 120) {
             dismiss();
           } else {
-            animate(dragY, 0, springConfig);
+            animate(dragY, 0, enterSpring);
           }
           return;
         }
 
-        const vh = window.innerHeight;
-        const maxHeight = maxSnap * vh;
+        const h = contained && container ? container.clientHeight : window.innerHeight;
+        const maxHeight = maxSnap * h;
         const currentY = dragY.get();
 
-        // If fast swipe down or dragged past the smallest snap, dismiss
-        const smallestSnapHeight = sorted![0] * vh;
+        const smallestSnapHeight = sorted![0] * h;
         const dismissThresholdY = maxHeight - smallestSnapHeight * 0.5;
 
         if (info.velocity.y > 400 || currentY > dismissThresholdY) {
@@ -176,7 +189,6 @@ const BottomSheetContent = React.forwardRef<
           return;
         }
 
-        // Find the nearest snap point
         let bestIndex = 0;
         let bestDist = Infinity;
         for (let i = 0; i < sorted!.length; i++) {
@@ -188,7 +200,6 @@ const BottomSheetContent = React.forwardRef<
           }
         }
 
-        // Velocity bias: if swiping up, prefer the next larger snap; if down, next smaller
         if (info.velocity.y < -200 && bestIndex < sorted!.length - 1) {
           bestIndex = Math.min(bestIndex + 1, sorted!.length - 1);
         } else if (info.velocity.y > 200 && bestIndex > 0) {
@@ -197,55 +208,117 @@ const BottomSheetContent = React.forwardRef<
 
         snapTo(bestIndex);
       },
-      [hasSnaps, dismiss, dragY, maxSnap, sorted, getYForSnap, snapTo]
+      [hasSnaps, dismiss, dragY, maxSnap, sorted, getYForSnap, snapTo, contained, container]
     );
 
-    // Set initial y for the starting snap point
     const initialY = hasSnaps ? getYForSnap(initialIndex) : 0;
+    const showOverlay = modal;
 
-    return (
-      <AnimatePresence>
-        {open && (
-          <BottomSheetPortal forceMount>
-            <DialogPrimitive.Overlay asChild forceMount>
+    /* ── Contained rendering (no Radix portal — no body side effects) ── */
+    if (contained) {
+      return (
+        <AnimatePresence>
+          {open && (
+            <>
+              {showOverlay && (
+                <motion.div
+                  className={cn(pos, "inset-0 z-50 bg-black/40 backdrop-blur-[2px]")}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  style={{ opacity: overlayOpacity }}
+                  onClick={dismiss}
+                />
+              )}
               <motion.div
-                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                style={{ opacity: overlayOpacity }}
-              />
-            </DialogPrimitive.Overlay>
-            <DialogPrimitive.Content
-              ref={ref}
-              asChild
-              forceMount
-              onEscapeKeyDown={dismiss}
-              onPointerDownOutside={dismiss}
-              {...props}
-            >
-              <motion.div
+                ref={ref as React.Ref<HTMLDivElement>}
+                role="dialog"
+                aria-modal={modal}
                 className={cn(
-                  "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-safe-bottom shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
+                  pos,
+                  "inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
                   className
                 )}
                 style={{
-                  height: hasSnaps ? `${maxSnap * 100}dvh` : undefined,
-                  maxHeight: hasSnaps ? undefined : "85dvh",
+                  height: hasSnaps ? `${maxSnap * 100}%` : undefined,
+                  maxHeight: hasSnaps ? undefined : "85%",
                   y: dragY,
+                  willChange: "transform",
                 }}
                 initial={{ y: "100%" }}
                 animate={{ y: initialY }}
                 exit={{ y: "100%" }}
-                transition={springConfig}
+                transition={{ enter: enterSpring, exit: exitTween, ...enterSpring }}
                 drag="y"
                 dragControls={dragControls}
                 dragConstraints={{ top: hasSnaps ? -10 : 0 }}
                 dragElastic={{ top: 0.05, bottom: 0.6 }}
                 onDragEnd={handleDragEnd}
               >
-                {/* Drag handle */}
+                <div
+                  className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
+                  onPointerDown={(e) => dragControls.start(e)}
+                >
+                  <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
+                </div>
+                <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+                  {children}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      );
+    }
+
+    /* ── Default rendering (Radix portal for full-page usage) ────────── */
+    return (
+      <AnimatePresence>
+        {open && (
+          <DialogPrimitive.Portal forceMount>
+            {showOverlay && (
+              <DialogPrimitive.Overlay asChild forceMount>
+                <motion.div
+                  className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  style={{ opacity: overlayOpacity }}
+                />
+              </DialogPrimitive.Overlay>
+            )}
+            <DialogPrimitive.Content
+              ref={ref}
+              asChild
+              forceMount
+              onEscapeKeyDown={dismiss}
+              onPointerDownOutside={modal ? dismiss : undefined}
+              onInteractOutside={modal ? undefined : (e) => e.preventDefault()}
+              {...props}
+            >
+              <motion.div
+                className={cn(
+                  "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
+                  className
+                )}
+                style={{
+                  height: hasSnaps ? `${maxSnap * 100}dvh` : undefined,
+                  maxHeight: hasSnaps ? undefined : "85dvh",
+                  y: dragY,
+                  willChange: "transform",
+                }}
+                initial={{ y: "100%" }}
+                animate={{ y: initialY }}
+                exit={{ y: "100%" }}
+                transition={{ enter: enterSpring, exit: exitTween, ...enterSpring }}
+                drag="y"
+                dragControls={dragControls}
+                dragConstraints={{ top: hasSnaps ? -10 : 0 }}
+                dragElastic={{ top: 0.05, bottom: 0.6 }}
+                onDragEnd={handleDragEnd}
+              >
                 <div
                   className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
                   onPointerDown={(e) => dragControls.start(e)}
@@ -257,7 +330,7 @@ const BottomSheetContent = React.forwardRef<
                 </div>
               </motion.div>
             </DialogPrimitive.Content>
-          </BottomSheetPortal>
+          </DialogPrimitive.Portal>
         )}
       </AnimatePresence>
     );

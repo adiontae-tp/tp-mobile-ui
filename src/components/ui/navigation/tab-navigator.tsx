@@ -96,8 +96,7 @@ function TabNavigator({ initialTab, children, className }: TabNavigatorProps) {
           ))}
         </div>
 
-        {/* Bottom tab bar — override fixed positioning to stay in-flow */}
-        <BottomTabsBar className="!static !inset-auto border-t">
+        <BottomTabsBar>
           {tabs.map((tab) => (
             <BottomTabsTab
               key={tab.name}

@@ -20,6 +20,8 @@ export interface ActionSheetProps {
   actions: ActionSheetAction[];
   cancelLabel?: string;
   children?: React.ReactNode;
+  /** Portal target element for contained rendering. */
+  container?: HTMLElement | null;
 }
 
 function ActionSheet({
@@ -28,6 +30,7 @@ function ActionSheet({
   actions,
   cancelLabel = "Cancel",
   children,
+  container,
 }: ActionSheetProps) {
   const handleAction = (action: ActionSheetAction) => {
     action.onSelect();
@@ -35,9 +38,9 @@ function ActionSheet({
   };
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange}>
+    <BottomSheet open={open} onOpenChange={onOpenChange} modal={!container}>
       {children && <BottomSheetTrigger asChild>{children}</BottomSheetTrigger>}
-      <BottomSheetContent onClose={() => onOpenChange?.(false)}>
+      <BottomSheetContent onClose={() => onOpenChange?.(false)} container={container}>
         <div className="flex flex-col">
           {actions.map((action, index) => (
             <React.Fragment key={index}>

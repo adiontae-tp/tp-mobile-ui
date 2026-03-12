@@ -23,6 +23,10 @@ import { BottomTabsDemo } from "@/demo/pages/BottomTabsDemo";
 import { NavigationDemo } from "@/demo/pages/NavigationDemo";
 import { ViewSwitcherDemo } from "@/demo/pages/ViewSwitcherDemo";
 import { ToolbarSheetDemo } from "@/demo/pages/ToolbarSheetDemo";
+import { DrawerDemo } from "@/demo/pages/DrawerDemo";
+import { ListDemo } from "@/demo/pages/ListDemo";
+import { WeekCalendarDemo } from "@/demo/pages/WeekCalendarDemo";
+import { FooterButtonsDemo } from "@/demo/pages/FooterButtonsDemo";
 
 // Mobile previews
 import { PreviewIndex } from "@/demo/pages/PreviewIndex";
@@ -44,6 +48,10 @@ import { BottomTabsPreview } from "@/demo/previews/BottomTabsPreview";
 import { NavigationPreview } from "@/demo/previews/NavigationPreview";
 import { ViewSwitcherPreview } from "@/demo/previews/ViewSwitcherPreview";
 import { ToolbarSheetPreview } from "@/demo/previews/ToolbarSheetPreview";
+import { DrawerPreview } from "@/demo/previews/DrawerPreview";
+import { ListPreview } from "@/demo/previews/ListPreview";
+import { WeekCalendarPreview } from "@/demo/previews/WeekCalendarPreview";
+import { FooterButtonsPreview } from "@/demo/previews/FooterButtonsPreview";
 
 function App() {
   return (
@@ -70,6 +78,10 @@ function App() {
           <Route path="navigation" element={<NavigationDemo />} />
           <Route path="view-switcher" element={<ViewSwitcherDemo />} />
           <Route path="toolbar-sheet" element={<ToolbarSheetDemo />} />
+          <Route path="drawer" element={<DrawerDemo />} />
+          <Route path="list" element={<ListDemo />} />
+          <Route path="week-calendar" element={<WeekCalendarDemo />} />
+          <Route path="footer-buttons" element={<FooterButtonsDemo />} />
         </Route>
 
         {/* Mobile previews (full-screen, for phone testing) */}
@@ -93,6 +105,10 @@ function App() {
           <Route path="navigation" element={<NavigationPreview />} />
           <Route path="view-switcher" element={<ViewSwitcherPreview />} />
           <Route path="toolbar-sheet" element={<ToolbarSheetPreview />} />
+          <Route path="drawer" element={<DrawerPreview />} />
+          <Route path="list" element={<ListPreview />} />
+          <Route path="week-calendar" element={<WeekCalendarPreview />} />
+          <Route path="footer-buttons" element={<FooterButtonsPreview />} />
         </Route>
       </Routes>
       <Toaster />

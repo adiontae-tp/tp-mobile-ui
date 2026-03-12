@@ -25,20 +25,27 @@ export function PhonePreview({ children, className }: PhonePreviewProps) {
               <svg className="h-3.5 w-4" viewBox="0 0 28 14" fill="currentColor"><rect x="0" y="1" width="22" height="12" rx="2.5" stroke="currentColor" strokeWidth="1" fill="none"/><rect x="23.5" y="4.5" width="2" height="5" rx="1" opacity="0.4"/><rect x="2" y="3" width="16" height="8" rx="1"/></svg>
             </div>
           </div>
-          {/* Screen — set CSS variable to simulate safe area for components */}
+          {/*
+            Screen area — includes the home indicator zone so components
+            can extend behind it (like real iOS safe areas).
+            --safe-area-inset-bottom is read by BottomTabsBar, Header, etc.
+          */}
           <div
-            className="relative h-[538px] overflow-y-auto bg-background"
+            className="relative flex flex-col bg-background"
             style={{
-              /* Override env() with real values inside the preview */
-              ["--preview-safe-top" as string]: "52px",
-              ["--preview-safe-bottom" as string]: "34px",
+              height: 572, /* 538 screen + 34 home indicator */
+              ["--safe-area-inset-bottom" as string]: "34px",
+              ["--safe-area-inset-top" as string]: "0px",
             }}
           >
-            {children}
-          </div>
-          {/* Home indicator area — simulates env(safe-area-inset-bottom) */}
-          <div className="flex h-[34px] items-end justify-center bg-background pb-2">
-            <div className="h-[5px] w-[134px] rounded-full bg-neutral-400 dark:bg-neutral-500" />
+            {/* Scrollable content area */}
+            <div className="relative min-h-0 flex-1 overflow-y-auto">
+              {children}
+            </div>
+            {/* Home indicator overlay — sits on top of content */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[34px] items-end justify-center pb-2">
+              <div className="h-[5px] w-[134px] rounded-full bg-neutral-400 dark:bg-neutral-500" />
+            </div>
           </div>
         </div>
       </div>

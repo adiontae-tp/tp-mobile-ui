@@ -21,6 +21,7 @@ const navSections = [
     title: "Display",
     items: [
       { path: "/card", label: "Card" },
+      { path: "/list", label: "List" },
       { path: "/badge", label: "Badge" },
       { path: "/avatar", label: "Avatar" },
     ],
@@ -37,13 +38,26 @@ const navSections = [
     items: [
       { path: "/header", label: "Header" },
       { path: "/tabs", label: "Tabs" },
+      { path: "/bottom-tabs", label: "Bottom Tabs" },
+      { path: "/drawer", label: "Drawer" },
+      { path: "/navigation", label: "Navigation" },
+    ],
+  },
+  {
+    title: "Overlays",
+    items: [
       { path: "/bottom-sheet", label: "Bottom Sheet" },
       { path: "/action-sheet", label: "Action Sheet" },
       { path: "/toast", label: "Toast" },
-      { path: "/bottom-tabs", label: "Bottom Tabs" },
-      { path: "/navigation", label: "Navigation" },
-      { path: "/view-switcher", label: "View Switcher" },
       { path: "/toolbar-sheet", label: "Toolbar Sheet" },
+    ],
+  },
+  {
+    title: "Layout",
+    items: [
+      { path: "/footer-buttons", label: "Footer Buttons" },
+      { path: "/view-switcher", label: "View Switcher" },
+      { path: "/week-calendar", label: "Week Calendar" },
     ],
   },
 ];
