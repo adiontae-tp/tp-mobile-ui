@@ -35,12 +35,12 @@ interface FooterSheetProps {
   /** Called when the sheet wants to close (e.g. swiped down past the smallest snap). */
   onOpenChange?: (open: boolean) => void;
   /**
-   * Snap points as pixel heights for the **entire sheet** (handle + content + footer).
-   * Sorted ascending internally. The smallest should fit the handle + footer buttons.
-   * Example: [80, 280, 460]
+   * Snap points as fractions of the container/viewport height (0–1).
+   * Sorted ascending internally. The sheet always opens at ≥ 50%.
+   * Example: [0.5, 0.85] — half screen, near full.
    */
-  snapPoints: number[];
-  /** Index into the sorted snapPoints to start at when opened. Defaults to 0 (smallest). */
+  snapPoints?: number[];
+  /** Index into the sorted snapPoints to start at when opened. Defaults to 0. */
   defaultSnapPoint?: number;
   /** Called when the sheet settles on a snap point index. */
   onSnapPointChange?: (index: number) => void;
@@ -61,10 +61,35 @@ function FooterSheet({
 }: FooterSheetProps) {
   const contained = container != null;
   const pos = contained ? "absolute" : "fixed";
-  const sorted = React.useMemo(
-    () => [...snapPoints].sort((a, b) => a - b),
+
+  // Resolve fractions to pixel heights based on container or viewport
+  const getContainerHeight = React.useCallback(() => {
+    if (container) return container.clientHeight;
+    return window.innerHeight;
+  }, [container]);
+
+  // Default snap points: 50% and 85% if none provided
+  const fractions = React.useMemo(
+    () => {
+      const pts = snapPoints ? [...snapPoints] : [0.5, 0.85];
+      // Ensure at least 50%
+      if (pts.every((p) => p < 0.5)) pts.push(0.5);
+      return pts.sort((a, b) => a - b);
+    },
     [snapPoints]
   );
+
+  const [sorted, setSorted] = React.useState<number[]>(() =>
+    fractions.map((f) => f * getContainerHeight())
+  );
+
+  // Recalculate on resize
+  React.useEffect(() => {
+    const update = () => setSorted(fractions.map((f) => f * getContainerHeight()));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [fractions, getContainerHeight]);
 
   const maxHeight = sorted[sorted.length - 1];
   const minHeight = sorted[0];

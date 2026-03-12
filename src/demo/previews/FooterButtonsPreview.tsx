@@ -67,8 +67,7 @@ export function FooterButtonsPreview() {
       <FooterSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        snapPoints={[80, 260, 420]}
-        defaultSnapPoint={0}
+        snapPoints={[0.5, 0.85]}
         container={containerRef.current}
       >
         <FooterSheetContent>
