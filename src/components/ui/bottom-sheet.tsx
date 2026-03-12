@@ -1,15 +1,6 @@
 import * as React from "react";
-import { createPortal } from "react-dom";
+import { Sheet, type SheetRef } from "react-modal-sheet";
 import { Slot } from "@radix-ui/react-slot";
-import {
-  motion,
-  AnimatePresence,
-  useDragControls,
-  useMotionValue,
-  useTransform,
-  animate,
-  type PanInfo,
-} from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /* ── Types ────────────────────────────────────────────────────────── */
@@ -18,18 +9,9 @@ import { cn } from "@/lib/utils";
  * A detent describes a resting height for the sheet.
  * - `number` — pixels (e.g. 120)
  * - `"50%"` — percentage of container/viewport height
- * - `"content"` — auto-sized to fit children (measured via ResizeObserver)
+ * - `"content"` — auto-sized to fit children
  */
 type Detent = number | `${number}%` | "content";
-
-/* ── Spring config ────────────────────────────────────────────────── */
-
-const springConfig = {
-  type: "spring" as const,
-  damping: 28,
-  stiffness: 260,
-  mass: 0.8,
-};
 
 /* ── Context ──────────────────────────────────────────────────────── */
 
@@ -40,11 +22,10 @@ interface BottomSheetContextValue {
   activeDetentIndex: number;
   setDetent: (index: number) => void;
   dismiss: () => void;
-  dragControls: ReturnType<typeof useDragControls>;
-  dragY: ReturnType<typeof useMotionValue<number>>;
-  resolvedDetents: number[];
-  sheetHeightPx: number;
-  containerHeight: number;
+  sheetRef: React.RefObject<SheetRef | null>;
+  detents: Detent[];
+  resolvedSnapPoints: number[];
+  defaultDetentIndex: number;
   dismissible: boolean;
   container: HTMLElement | null | undefined;
   titleId: string;
@@ -67,22 +48,11 @@ function useBottomSheet() {
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
-function parseDetent(d: Detent, containerHeight: number, contentHeight: number): number {
-  if (d === "content") return contentHeight;
+function parseDetent(d: Detent, containerHeight: number): number {
+  if (d === "content") return 0; // react-modal-sheet handles content detent differently
   if (typeof d === "number") return d;
-  // percentage string like "50%"
   const pct = parseFloat(d) / 100;
-  return pct * containerHeight;
-}
-
-function resolveDetents(
-  detents: Detent[],
-  containerHeight: number,
-  contentHeight: number
-): number[] {
-  return detents
-    .map((d) => parseDetent(d, containerHeight, contentHeight))
-    .sort((a, b) => a - b);
+  return Math.round(pct * containerHeight);
 }
 
 /* ── Root ─────────────────────────────────────────────────────────── */
@@ -121,6 +91,8 @@ function BottomSheet({
   container,
   children,
 }: BottomSheetProps) {
+  const sheetRef = React.useRef<SheetRef>(null);
+
   // Open state
   const isControlledOpen = openProp !== undefined;
   const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
@@ -136,18 +108,11 @@ function BottomSheet({
 
   // Detent state
   const isControlledDetent = activeDetentProp !== undefined;
-  const initialDetentIndex = defaultDetent ?? detentsProp.length - 1;
-  const [internalDetentIndex, setInternalDetentIndex] = React.useState(initialDetentIndex);
+  const defaultDetentIndex = defaultDetent ?? detentsProp.length - 1;
+  const [internalDetentIndex, setInternalDetentIndex] = React.useState(defaultDetentIndex);
   const activeDetentIndex = isControlledDetent ? activeDetentProp : internalDetentIndex;
 
-  // Drag
-  const dragControls = useDragControls();
-  const dragY = useMotionValue(0);
-
-  // Content measurement for "content" detent
-  const [contentHeight, setContentHeight] = React.useState(300);
-
-  // Container/viewport height
+  // Container height for resolving percentages
   const getContainerHeight = React.useCallback(() => {
     if (container) return container.clientHeight;
     return typeof window !== "undefined" ? window.innerHeight : 800;
@@ -162,34 +127,38 @@ function BottomSheet({
     return () => window.removeEventListener("resize", update);
   }, [getContainerHeight]);
 
-  // Resolve detents to px
-  const resolvedDetents = React.useMemo(
-    () => resolveDetents(detentsProp, containerHeight, contentHeight),
-    [detentsProp, containerHeight, contentHeight]
-  );
+  // Resolve detents to pixel snap points for react-modal-sheet
+  // react-modal-sheet uses snap points as distances from TOP, so we convert
+  const resolvedSnapPoints = React.useMemo(() => {
+    const hasContent = detentsProp.includes("content");
+    if (hasContent) return []; // Let react-modal-sheet handle content sizing
 
-  const maxDetentPx = resolvedDetents[resolvedDetents.length - 1];
+    // Parse to pixel heights, sort ascending
+    const heights = detentsProp
+      .map((d) => parseDetent(d, containerHeight))
+      .sort((a, b) => a - b);
 
-  // The sheet is always full container height so it extends to the bottom edge.
-  // Y-offset controls how much is visible: y = containerHeight - detentPx.
-  const sheetHeightPx = containerHeight;
+    // react-modal-sheet snapPoints: distance from top of viewport
+    // height 400 in a 800px viewport = snapPoint at 400 (from top)
+    return heights.map((h) => containerHeight - h);
+  }, [detentsProp, containerHeight]);
 
-  const getYForDetent = React.useCallback(
-    (index: number) => {
-      const detentPx = resolvedDetents[index] ?? maxDetentPx;
-      return containerHeight - detentPx;
-    },
-    [resolvedDetents, maxDetentPx, containerHeight]
+  // Map our detent index to react-modal-sheet snap index
+  // Our detents are sorted ascending (smallest first), snap points are distances from top (largest first)
+  // So our index 0 (smallest height) = last snap point index, our last = first snap point
+  const toSheetSnapIndex = React.useCallback(
+    (detentIdx: number) => resolvedSnapPoints.length - 1 - detentIdx,
+    [resolvedSnapPoints.length]
   );
 
   const setDetent = React.useCallback(
     (index: number) => {
-      const clamped = Math.max(0, Math.min(index, resolvedDetents.length - 1));
+      const clamped = Math.max(0, Math.min(index, detentsProp.length - 1));
       if (!isControlledDetent) setInternalDetentIndex(clamped);
       onDetentChange?.(clamped);
-      animate(dragY, getYForDetent(clamped), springConfig);
+      sheetRef.current?.snapTo(toSheetSnapIndex(clamped));
     },
-    [resolvedDetents.length, isControlledDetent, onDetentChange, dragY, getYForDetent]
+    [detentsProp.length, isControlledDetent, onDetentChange, toSheetSnapIndex]
   );
 
   const dismiss = React.useCallback(() => {
@@ -199,17 +168,16 @@ function BottomSheet({
   // Reset when opened
   React.useEffect(() => {
     if (isOpen) {
-      const idx = isControlledDetent ? activeDetentProp : initialDetentIndex;
-      const clampedIdx = Math.max(0, Math.min(idx, resolvedDetents.length - 1));
-      if (!isControlledDetent) setInternalDetentIndex(clampedIdx);
-      dragY.set(getYForDetent(clampedIdx));
+      const idx = isControlledDetent ? activeDetentProp : defaultDetentIndex;
+      const clamped = Math.max(0, Math.min(idx, detentsProp.length - 1));
+      if (!isControlledDetent) setInternalDetentIndex(clamped);
     }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync controlled detent
   React.useEffect(() => {
     if (isControlledDetent && isOpen) {
-      animate(dragY, getYForDetent(activeDetentProp), springConfig);
+      sheetRef.current?.snapTo(toSheetSnapIndex(activeDetentProp));
     }
   }, [activeDetentProp]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -226,71 +194,27 @@ function BottomSheet({
       activeDetentIndex,
       setDetent,
       dismiss,
-      dragControls,
-      dragY,
-      resolvedDetents,
-      sheetHeightPx,
-      containerHeight,
+      sheetRef,
+      detents: detentsProp,
+      resolvedSnapPoints,
+      defaultDetentIndex,
       dismissible,
       container,
       titleId,
       descriptionId,
     }),
     [
-      isOpen,
-      handleOpenChange,
-      modal,
-      activeDetentIndex,
-      setDetent,
-      dismiss,
-      dragControls,
-      dragY,
-      resolvedDetents,
-      sheetHeightPx,
-      containerHeight,
-      dismissible,
-      container,
-      titleId,
-      descriptionId,
+      isOpen, handleOpenChange, modal, activeDetentIndex, setDetent,
+      dismiss, detentsProp, resolvedSnapPoints, defaultDetentIndex,
+      dismissible, container, titleId, descriptionId,
     ]
   );
 
   return (
     <BottomSheetContext.Provider value={ctxValue}>
-      <ContentMeasurer
-        detents={detentsProp}
-        onMeasure={setContentHeight}
-      />
       {children}
     </BottomSheetContext.Provider>
   );
-}
-
-/** Invisible element to measure content height when "content" detent is used. */
-function ContentMeasurer({
-  detents,
-  onMeasure,
-}: {
-  detents: Detent[];
-  onMeasure: (h: number) => void;
-}) {
-  // Only set up observer if "content" detent is in use
-  const hasContent = detents.includes("content");
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!hasContent || !ref.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        onMeasure(entry.contentRect.height);
-      }
-    });
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [hasContent, onMeasure]);
-
-  // We don't render a measurer — content measurement happens on the scroll area
-  return null;
 }
 
 /* ── Trigger ──────────────────────────────────────────────────────── */
@@ -353,224 +277,80 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
       open,
       onOpenChange,
       modal,
-      dragControls,
-      dragY,
-      resolvedDetents,
-      sheetHeightPx,
-      containerHeight,
+      sheetRef,
+      resolvedSnapPoints,
+      defaultDetentIndex,
       dismissible,
       container,
       titleId,
       descriptionId,
-      activeDetentIndex,
     } = ctx;
 
-    const scrollRef = React.useRef<HTMLDivElement>(null);
-    const contained = container != null;
-    const position = contained ? "absolute" : "fixed";
-
-    // Overlay opacity: fully opaque at largest detent, transparent when dismissed
-    const largestDetentY = containerHeight - (resolvedDetents[resolvedDetents.length - 1] ?? containerHeight);
-    const overlayOpacity = useTransform(dragY, [largestDetentY, containerHeight], [1, 0]);
-
-    // Y offset for current detent
-    const getYForDetent = React.useCallback(
-      (index: number) => {
-        const detentPx = resolvedDetents[index] ?? resolvedDetents[resolvedDetents.length - 1];
-        return containerHeight - detentPx;
-      },
-      [resolvedDetents, containerHeight]
-    );
-
-    const initialY = getYForDetent(activeDetentIndex);
-
-    const handleDismiss = React.useCallback(() => {
+    const handleClose = React.useCallback(() => {
       onOpenChange(false);
       onClose?.();
     }, [onOpenChange, onClose]);
 
-    // Drag end: snap to nearest detent or dismiss
-    const handleDragEnd = React.useCallback(
-      (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        const currentY = dragY.get();
-        const velocityY = info.velocity.y;
-
-        // Dismiss check
-        if (dismissible) {
-          const smallestDetentPx = resolvedDetents[0];
-          const dismissThresholdY = containerHeight - smallestDetentPx * 0.5;
-
-          if (velocityY > 400 || currentY > dismissThresholdY) {
-            handleDismiss();
-            return;
-          }
-        }
-
-        // Find nearest detent
-        let bestIndex = 0;
-        let bestDist = Infinity;
-        for (let i = 0; i < resolvedDetents.length; i++) {
-          const snapY = getYForDetent(i);
-          const dist = Math.abs(currentY - snapY);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestIndex = i;
-          }
-        }
-
-        // Velocity bias
-        if (velocityY < -200 && bestIndex < resolvedDetents.length - 1) {
-          bestIndex = Math.min(bestIndex + 1, resolvedDetents.length - 1);
-        } else if (velocityY > 200 && bestIndex > 0) {
-          bestIndex = Math.max(bestIndex - 1, 0);
-        }
-
-        ctx.setDetent(bestIndex);
+    // Handle snap index changes from react-modal-sheet
+    const handleSnap = React.useCallback(
+      (snapIndex: number) => {
+        const detentIdx = resolvedSnapPoints.length - 1 - snapIndex;
+        ctx.setDetent(detentIdx);
       },
-      [dragY, dismissible, resolvedDetents, containerHeight, getYForDetent, handleDismiss, ctx]
+      [resolvedSnapPoints.length, ctx]
     );
 
-    // Drag/scroll handoff: block sheet drag when scrolled down
-    const handleContentPointerDown = React.useCallback(
-      (e: React.PointerEvent<HTMLDivElement>) => {
-        const el = scrollRef.current;
-        if (el && el.scrollTop > 0) {
-          e.stopPropagation();
-        }
-      },
-      []
-    );
+    // Determine detent for react-modal-sheet
+    const hasContent = ctx.detents.includes("content");
+    const detent = hasContent ? "content" : "default";
 
-    // Prevent iOS overscroll chaining on the scroll content
-    React.useEffect(() => {
-      const el = scrollRef.current;
-      if (!el) return;
+    // Initial snap index (convert our ascending index to react-modal-sheet descending)
+    const initialSnap = resolvedSnapPoints.length > 0
+      ? resolvedSnapPoints.length - 1 - defaultDetentIndex
+      : 0;
 
-      let startY = 0;
-
-      const onTouchStart = (e: TouchEvent) => {
-        startY = e.touches[0].clientY;
-      };
-
-      const onTouchMove = (e: TouchEvent) => {
-        const dy = e.touches[0].clientY - startY;
-        if (el.scrollTop <= 0 && dy > 0) {
-          e.preventDefault();
-        }
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight && dy < 0) {
-          e.preventDefault();
-        }
-      };
-
-      el.addEventListener("touchstart", onTouchStart, { passive: true });
-      el.addEventListener("touchmove", onTouchMove, { passive: false });
-      return () => {
-        el.removeEventListener("touchstart", onTouchStart);
-        el.removeEventListener("touchmove", onTouchMove);
-      };
-    }, [open]);
-
-    // Escape key dismissal
-    React.useEffect(() => {
-      if (!open || !modal) return;
-      const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") handleDismiss();
-      };
-      document.addEventListener("keydown", onKeyDown);
-      return () => document.removeEventListener("keydown", onKeyDown);
-    }, [open, modal, handleDismiss]);
-
-    // Body scroll lock for modal sheets (not contained)
-    React.useEffect(() => {
-      if (!open || !modal || contained) return;
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }, [open, modal, contained]);
-
-    const portalTarget = contained ? container! : document.body;
-
-    const sheet = (
-      <AnimatePresence>
-        {open && (
-          <>
-            {/* Overlay */}
-            {modal && (
-              <motion.div
-                key="bs-overlay"
-                className={cn(
-                  "inset-0 z-50 bg-black/40 backdrop-blur-[2px]",
-                  position
-                )}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                style={{ opacity: overlayOpacity }}
-                onClick={dismissible ? handleDismiss : undefined}
-              />
-            )}
-
-            {/* Sheet */}
-            <motion.div
-              key="bs-sheet"
+    return (
+      <Sheet
+        ref={sheetRef}
+        isOpen={open}
+        onClose={handleClose}
+        snapPoints={resolvedSnapPoints.length > 0 ? resolvedSnapPoints : undefined}
+        initialSnap={resolvedSnapPoints.length > 0 ? Math.max(0, Math.min(initialSnap, resolvedSnapPoints.length - 1)) : 0}
+        onSnap={resolvedSnapPoints.length > 0 ? handleSnap : undefined}
+        detent={resolvedSnapPoints.length > 0 ? undefined : detent}
+        mountPoint={container ?? undefined}
+        disableDrag={false}
+        disableDismiss={!dismissible}
+      >
+        <Sheet.Container
+          className={cn(
+            "!rounded-t-2xl !bg-background !shadow-[0_-8px_32px_rgba(0,0,0,0.12)]",
+            className
+          )}
+          style={{
+            paddingBottom: container
+              ? undefined
+              : "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))",
+          }}
+          {...props}
+        >
+          <Sheet.Header className="!bg-transparent" />
+          <Sheet.Content>
+            <div
               ref={ref}
               role="dialog"
               aria-modal={modal}
               aria-labelledby={titleId}
               aria-describedby={descriptionId}
-              className={cn(
-                "inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-background shadow-[0_-8px_32px_rgba(0,0,0,0.12)] touch-none",
-                position,
-                className
-              )}
-              style={{
-                height: sheetHeightPx,
-                maxHeight: contained ? "100%" : "100dvh",
-                y: dragY,
-                willChange: "transform",
-                paddingBottom: contained
-                  ? undefined
-                  : "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))",
-              }}
-              initial={{ y: sheetHeightPx }}
-              animate={{ y: initialY }}
-              exit={{ y: sheetHeightPx }}
-              transition={springConfig}
-              drag="y"
-              dragControls={dragControls}
-              dragListener={false}
-              dragConstraints={{ top: -15 }}
-              dragElastic={{ top: 0.08, bottom: 0.5 }}
-              onDragEnd={handleDragEnd}
-              onPointerDown={(e) => dragControls.start(e)}
-              {...props}
+              className="px-4 pb-4"
             >
-              {/* Drag handle */}
-              <div
-                className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none"
-                onPointerDown={(e) => dragControls.start(e)}
-              >
-                <div className="h-[5px] w-9 rounded-full bg-muted-foreground/25" />
-              </div>
-
-              {/* Scrollable content with drag/scroll handoff */}
-              <div
-                ref={scrollRef}
-                className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 touch-auto"
-                onPointerDown={handleContentPointerDown}
-              >
-                {children}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              {children}
+            </div>
+          </Sheet.Content>
+        </Sheet.Container>
+        {modal && <Sheet.Backdrop />}
+      </Sheet>
     );
-
-    return createPortal(sheet, portalTarget);
   }
 );
 BottomSheetContent.displayName = "BottomSheetContent";

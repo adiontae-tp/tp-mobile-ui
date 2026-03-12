@@ -1,5 +1,5 @@
 /** Version embedded in copied component files for update tracking. */
-export const REGISTRY_VERSION = "0.2.0";
+export const REGISTRY_VERSION = "0.3.0";
 
 /** @type {Record<string, { file: string, dependencies: string[], internalDeps: string[], description: string }>} */
 export const registry = {
@@ -77,7 +77,7 @@ export const registry = {
   },
   "bottom-sheet": {
     file: "bottom-sheet.tsx",
-    dependencies: ["@radix-ui/react-dialog", "framer-motion", "clsx", "tailwind-merge"],
+    dependencies: ["react-modal-sheet", "@radix-ui/react-slot", "clsx", "tailwind-merge"],
     internalDeps: [],
     description: "Draggable bottom panel with spring animations and snap points.",
   },
