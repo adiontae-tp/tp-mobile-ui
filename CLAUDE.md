@@ -32,10 +32,90 @@ src/
 └── main.tsx                # Entry point
 ```
 
+## Page Layout System
+
+Every screen must use the Page layout system for correct positioning on all devices (especially iOS PWA). Components do not own their own full-screen layout — they are designed to be placed into Page slots.
+
+### Core Components (`page.tsx`)
+
+| Component | Role |
+|-----------|------|
+| `Page` | Sized flex-column container with positioning context and CSS containment |
+| `PageContent` | Non-scrollable content area (`flex-1`, `relative`, `overflow-hidden`) |
+| `ScrollView` | Scrollable region that fills its parent (`absolute inset-0`, `overflow-y-auto`) |
+| `PageFooter` | Bottom-anchored slot (`shrink-0`), sits above safe area |
+
+### Usage Patterns
+
+**Scrollable content with footer (most common):**
+```tsx
+<Page>
+  <Header title="Settings" />
+  <PageContent>
+    <ScrollView className="p-4">
+      {/* scrollable content */}
+    </ScrollView>
+  </PageContent>
+  <PageFooter>
+    <FooterButtons>
+      <Button>Save</Button>
+    </FooterButtons>
+  </PageFooter>
+</Page>
+```
+
+**Chat (component has its own scroll):**
+```tsx
+<Page>
+  <PageContent>
+    <ChatMessageList>{/* messages */}</ChatMessageList>
+  </PageContent>
+  <ChatTypingIndicator visible={isTyping} />
+  <PageFooter>
+    <ChatInput />
+  </PageFooter>
+</Page>
+```
+
+**Non-scrolling content (map, fixed layout):**
+```tsx
+<Page>
+  <PageContent>
+    <MapView />
+  </PageContent>
+  <ToolbarSheet>{/* toolbar */}</ToolbarSheet>
+</Page>
+```
+
+**Tab bar:**
+```tsx
+<BottomTabs value={tab} onValueChange={setTab}>
+  <Page>
+    <PageContent>
+      <ScrollView>
+        <BottomTabsContent value="home">{/* ... */}</BottomTabsContent>
+      </ScrollView>
+    </PageContent>
+    <PageFooter>
+      <BottomTabsBar>{/* tabs */}</BottomTabsBar>
+    </PageFooter>
+  </Page>
+</BottomTabs>
+```
+
+### Key Rules
+- **Page** is always the outermost layout container for a screen
+- **PageContent** does NOT scroll — add `ScrollView` inside when scrolling is needed
+- Components like `BottomTabs` and `Chat` use `display: contents` — they provide context/state but no layout. Page handles layout.
+- Components with their own scroll (`ChatMessageList`) go directly inside `PageContent` without `ScrollView`
+- Bottom-anchored components (`FooterButtons`, `BottomTabsBar`, `ChatInput`) go in `PageFooter`
+- Overlay components (`ToolbarSheet`, `FooterSheet`, `ActionSheet`) work because `Page` provides `position: relative`
+
 ## Components
 
 | Component | File | Key Exports |
 |-----------|------|-------------|
+| Page | `page.tsx` | `Page`, `PageContent`, `PageFooter`, `ScrollView` — page layout system |
 | Button | `button.tsx` | `Button` — variants: default, destructive, outline, secondary, ghost, link; sizes: default, sm, lg, icon |
 | Text | `text.tsx` | `Text` — semantic typography with variant/size props |
 | Input | `input.tsx` | `Input` — mobile-optimized with 16px font (no iOS zoom) |
@@ -50,7 +130,7 @@ src/
 | Bottom Sheet | `bottom-sheet.tsx` | `BottomSheet`, `BottomSheetContent`, etc. — snap points, drag physics |
 | Action Sheet | `action-sheet.tsx` | `ActionSheet`, `ActionSheetItem`, etc. — iOS-style action menu |
 | Toast | `toast.tsx` | `Toaster`, `toast()` — sonner-based notifications |
-| Bottom Tabs | `bottom-tabs.tsx` | `BottomTabs`, `BottomTabsBar`, `BottomTabsTab`, `BottomTabsContent` |
+| Bottom Tabs | `bottom-tabs.tsx` | `BottomTabs` (context only), `BottomTabsBar`, `BottomTabsTab`, `BottomTabsContent` |
 | Toolbar Sheet | `toolbar-sheet.tsx` | `ToolbarSheet` — bottom toolbar with expandable sheet |
 | View Switcher | `view-switcher.tsx` | `View.Mobile`, `View.Tablet`, `View.Desktop`, `useViewport()` |
 | Navigation | `navigation/index.ts` | `StackNavigator`, `TabNavigator`, `ModalNavigator`, `SharedElement`, `useNavigation`, `useRoute` |
@@ -59,6 +139,10 @@ src/
 | Footer Buttons | `footer-buttons.tsx` | `FooterButtons` — sticky footer bar for 1-2 action buttons |
 | Footer Sheet | `footer-sheet.tsx` | `FooterSheet`, `FooterSheetContent`, `FooterSheetFooter` — bottom sheet with built-in footer buttons |
 | Week Calendar | `week-calendar.tsx` | `WeekCalendar` — swipeable week calendar with date selection |
+| Chat | `chat.tsx` | `Chat` (context only), `ChatMessageList`, `ChatMessage`, `ChatInput`, `ChatTypingIndicator` |
+| Calendar | `calendar.tsx` | `Calendar` — full month grid with single, range, and multiple selection |
+| Date Picker | `date-picker.tsx` | `DatePicker`, `DatePickerTrigger` — calendar in a bottom sheet |
+| Time Picker | `time-picker.tsx` | `TimePicker`, `TimePickerWheels`, `formatTimeValue` — iOS-style scroll wheels |
 
 ## Patterns & Conventions
 
@@ -71,10 +155,11 @@ Every component follows this pattern:
 - Uses Tailwind classes with design token colors (`bg-background`, `text-primary`, etc.)
 - Touch targets: minimum `min-h-touch` (44px via `--spacing-touch`)
 - Safe areas: `pb-safe-bottom`, `pt-safe-top` where applicable
+- Components do NOT own full-screen layout — they are slots for the Page system
 
 ### Adding a New Component
 1. Create `src/components/ui/{name}.tsx`
-2. Create `src/demo/previews/{Name}Preview.tsx` — interactive mobile preview
+2. Create `src/demo/previews/{Name}Preview.tsx` — interactive mobile preview using `Page`/`PageContent`/`ScrollView`/`PageFooter`
 3. Create `src/demo/pages/{Name}Demo.tsx` — wraps preview in `ComponentPage`
 4. Register in `src/App.tsx` (import + two routes: docs + preview)
 5. Add to sidebar in `src/demo/DemoShell.tsx` (`navSections`)

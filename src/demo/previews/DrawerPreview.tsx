@@ -6,6 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Header } from "@/components/ui/header";
+import { Page, PageContent, ScrollView } from "@/components/ui/page";
 import { Menu, SlidersHorizontal } from "lucide-react";
 
 const menuItems = [
@@ -25,7 +26,7 @@ export function DrawerPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={containerRef} className="relative flex flex-col overflow-hidden" style={{ minHeight: 480 }}>
+    <Page ref={containerRef}>
       <Drawer open={open} onOpenChange={setOpen} side="left" mode={mode} width={width}>
         <DrawerContent onClose={() => setOpen(false)} container={containerRef.current}>
           <DrawerHeader>
@@ -64,64 +65,68 @@ export function DrawerPreview() {
             }
           />
 
-          <div className="flex flex-col gap-4 p-4">
-            <p className="text-sm text-muted-foreground">
-              Tap the menu icon to open. Try different modes and widths below.
-            </p>
+          <PageContent>
+            <ScrollView className="p-4">
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Tap the menu icon to open. Try different modes and widths below.
+                </p>
 
-            {/* Mode selector */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mode</span>
-              <div className="flex gap-2">
-                {(["slide", "push"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setMode(m)}
-                    className={
-                      "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors " +
-                      (mode === m
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-foreground active:bg-accent")
-                    }
-                  >
-                    {m === "slide" ? "Slide (overlay)" : "Push (shift content)"}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* Mode selector */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mode</span>
+                  <div className="flex gap-2">
+                    {(["slide", "push"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMode(m)}
+                        className={
+                          "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors " +
+                          (mode === m
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-foreground active:bg-accent")
+                        }
+                      >
+                        {m === "slide" ? "Slide (overlay)" : "Push (shift content)"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Width selector */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Width</span>
-              <div className="flex gap-2">
-                {["200px", "260px", "80%"].map((w) => (
-                  <button
-                    key={w}
-                    onClick={() => setWidth(w)}
-                    className={
-                      "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors " +
-                      (width === w
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-foreground active:bg-accent")
-                    }
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* Width selector */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Width</span>
+                  <div className="flex gap-2">
+                    {["200px", "260px", "80%"].map((w) => (
+                      <button
+                        key={w}
+                        onClick={() => setWidth(w)}
+                        className={
+                          "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors " +
+                          (width === w
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-foreground active:bg-accent")
+                        }
+                      >
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span>
-                  <strong className="text-foreground">{mode}</strong> mode at <strong className="text-foreground">{width}</strong> width
-                </span>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <span>
+                      <strong className="text-foreground">{mode}</strong> mode at <strong className="text-foreground">{width}</strong> width
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </ScrollView>
+          </PageContent>
         </DrawerBody>
       </Drawer>
-    </div>
+    </Page>
   );
 }

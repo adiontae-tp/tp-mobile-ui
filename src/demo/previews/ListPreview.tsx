@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/list";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Page, PageContent, ScrollView } from "@/components/ui/page";
 import {
   Wifi, Bluetooth, Bell, Shield, Globe, Moon,
   Image, Music, Film, Gamepad2,
@@ -42,101 +43,107 @@ export function ListPreview() {
   }, [search]);
 
   return (
-    <div className="flex flex-col gap-2 pb-8">
-      {/* Search */}
-      <ListSearch value={search} onValueChange={setSearch} />
+    <Page>
+      <PageContent>
+        <ScrollView>
+          <div className="flex flex-col gap-2 pb-8">
+            {/* Search */}
+            <ListSearch value={search} onValueChange={setSearch} />
 
-      {/* Grouped section with label + footer */}
-      <ListSection label="Connectivity">
-        <List inset>
-          <ListItem pressable chevron>
-            <ListItemIcon>
-              <Wifi className="h-4 w-4" />
-            </ListItemIcon>
-            <ListItemContent>
-              <ListItemTitle>Wi-Fi</ListItemTitle>
-              <ListItemSubtitle>Home Network</ListItemSubtitle>
-            </ListItemContent>
-            <ListItemAction>
-              <Switch checked={wifiOn} onCheckedChange={setWifiOn} />
-            </ListItemAction>
-          </ListItem>
-          <ListItem pressable chevron>
-            <ListItemIcon className="bg-blue-500">
-              <Bluetooth className="h-4 w-4" />
-            </ListItemIcon>
-            <ListItemContent>
-              <ListItemTitle>Bluetooth</ListItemTitle>
-              <ListItemSubtitle>Off</ListItemSubtitle>
-            </ListItemContent>
-            <ListItemAction>
-              <Switch checked={btOn} onCheckedChange={setBtOn} />
-            </ListItemAction>
-          </ListItem>
-        </List>
-      </ListSection>
-
-      {/* Searchable section */}
-      <ListSection label="General" footer="Customize the look and feel of your app.">
-        <List inset>
-          {settingsItems.length > 0 ? (
-            settingsItems.map((item) => (
-              <ListItem key={item.label} pressable chevron>
-                <ListItemIcon className={item.color}>
-                  <item.icon className="h-4 w-4" />
-                </ListItemIcon>
-                <ListItemContent>
-                  <ListItemTitle>{item.label}</ListItemTitle>
-                  {item.sub && <ListItemSubtitle>{item.sub}</ListItemSubtitle>}
-                </ListItemContent>
-                {item.badge && (
+            {/* Grouped section with label + footer */}
+            <ListSection label="Connectivity">
+              <List inset>
+                <ListItem pressable chevron>
+                  <ListItemIcon>
+                    <Wifi className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>Wi-Fi</ListItemTitle>
+                    <ListItemSubtitle>Home Network</ListItemSubtitle>
+                  </ListItemContent>
                   <ListItemAction>
-                    <Badge variant="secondary">{item.badge}</Badge>
+                    <Switch checked={wifiOn} onCheckedChange={setWifiOn} />
                   </ListItemAction>
+                </ListItem>
+                <ListItem pressable chevron>
+                  <ListItemIcon className="bg-blue-500">
+                    <Bluetooth className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>Bluetooth</ListItemTitle>
+                    <ListItemSubtitle>Off</ListItemSubtitle>
+                  </ListItemContent>
+                  <ListItemAction>
+                    <Switch checked={btOn} onCheckedChange={setBtOn} />
+                  </ListItemAction>
+                </ListItem>
+              </List>
+            </ListSection>
+
+            {/* Searchable section */}
+            <ListSection label="General" footer="Customize the look and feel of your app.">
+              <List inset>
+                {settingsItems.length > 0 ? (
+                  settingsItems.map((item) => (
+                    <ListItem key={item.label} pressable chevron>
+                      <ListItemIcon className={item.color}>
+                        <item.icon className="h-4 w-4" />
+                      </ListItemIcon>
+                      <ListItemContent>
+                        <ListItemTitle>{item.label}</ListItemTitle>
+                        {item.sub && <ListItemSubtitle>{item.sub}</ListItemSubtitle>}
+                      </ListItemContent>
+                      {item.badge && (
+                        <ListItemAction>
+                          <Badge variant="secondary">{item.badge}</Badge>
+                        </ListItemAction>
+                      )}
+                    </ListItem>
+                  ))
+                ) : (
+                  <div className="flex min-h-touch items-center justify-center px-4 text-sm text-muted-foreground">
+                    No results
+                  </div>
                 )}
-              </ListItem>
-            ))
-          ) : (
-            <div className="flex min-h-touch items-center justify-center px-4 text-sm text-muted-foreground">
-              No results
-            </div>
-          )}
-        </List>
-      </ListSection>
+              </List>
+            </ListSection>
 
-      {/* Card variant (vertical, single column) */}
-      <ListSection label="Media">
-        <List variant="card">
-          {mediaItems.map((item) => (
-            <ListItem key={item.label} pressable>
-              <ListItemIcon className={item.color}>
-                <item.icon className="h-4 w-4" />
-              </ListItemIcon>
-              <ListItemContent>
-                <ListItemTitle>{item.label}</ListItemTitle>
-                <ListItemSubtitle>{item.sub}</ListItemSubtitle>
-              </ListItemContent>
-            </ListItem>
-          ))}
-        </List>
-      </ListSection>
+            {/* Card variant (vertical, single column) */}
+            <ListSection label="Media">
+              <List variant="card">
+                {mediaItems.map((item) => (
+                  <ListItem key={item.label} pressable>
+                    <ListItemIcon className={item.color}>
+                      <item.icon className="h-4 w-4" />
+                    </ListItemIcon>
+                    <ListItemContent>
+                      <ListItemTitle>{item.label}</ListItemTitle>
+                      <ListItemSubtitle>{item.sub}</ListItemSubtitle>
+                    </ListItemContent>
+                  </ListItem>
+                ))}
+              </List>
+            </ListSection>
 
-      {/* Card grid variant (2-column) */}
-      <ListSection label="Quick Access">
-        <List variant="card-grid">
-          {mediaItems.map((item) => (
-            <ListItem key={item.label} pressable>
-              <ListItemIcon className={item.color}>
-                <item.icon className="h-4 w-4" />
-              </ListItemIcon>
-              <ListItemContent>
-                <ListItemTitle>{item.label}</ListItemTitle>
-                <ListItemSubtitle>{item.sub}</ListItemSubtitle>
-              </ListItemContent>
-            </ListItem>
-          ))}
-        </List>
-      </ListSection>
-    </div>
+            {/* Card grid variant (2-column) */}
+            <ListSection label="Quick Access">
+              <List variant="card-grid">
+                {mediaItems.map((item) => (
+                  <ListItem key={item.label} pressable>
+                    <ListItemIcon className={item.color}>
+                      <item.icon className="h-4 w-4" />
+                    </ListItemIcon>
+                    <ListItemContent>
+                      <ListItemTitle>{item.label}</ListItemTitle>
+                      <ListItemSubtitle>{item.sub}</ListItemSubtitle>
+                    </ListItemContent>
+                  </ListItem>
+                ))}
+              </List>
+            </ListSection>
+          </div>
+        </ScrollView>
+      </PageContent>
+    </Page>
   );
 }
