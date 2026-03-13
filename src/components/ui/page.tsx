@@ -18,12 +18,12 @@ Page.displayName = "Page";
 /* ── PageContent ─────────────────────────────────────────────────── */
 
 const PageContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, children, ...props }, ref) => (
-    <div className={cn("relative min-h-0 flex-1 overflow-hidden", className)} {...props}>
-      <div ref={ref} className="absolute inset-0 overflow-y-auto overscroll-contain">
-        {children}
-      </div>
-    </div>
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("relative min-h-0 flex-1 overflow-hidden", className)}
+      {...props}
+    />
   )
 );
 PageContent.displayName = "PageContent";
@@ -41,6 +41,19 @@ const PageFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 PageFooter.displayName = "PageFooter";
 
+/* ── ScrollView ──────────────────────────────────────────────────── */
+
+const ScrollView = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("absolute inset-0 overflow-y-auto overscroll-contain", className)}
+      {...props}
+    />
+  )
+);
+ScrollView.displayName = "ScrollView";
+
 /* ── Exports ─────────────────────────────────────────────────────── */
 
-export { Page, PageContent, PageFooter };
+export { Page, PageContent, PageFooter, ScrollView };

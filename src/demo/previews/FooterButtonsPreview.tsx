@@ -1,7 +1,7 @@
 import { FooterButtons } from "@/components/ui/footer-buttons";
 import { FooterSheet, FooterSheetContent, FooterSheetFooter } from "@/components/ui/footer-sheet";
 import { Button } from "@/components/ui/button";
-import { Page, PageContent, PageFooter } from "@/components/ui/page";
+import { Page, PageContent, PageFooter, ScrollView } from "@/components/ui/page";
 import { useState, useRef } from "react";
 
 export function FooterButtonsPreview() {
@@ -12,7 +12,7 @@ export function FooterButtonsPreview() {
   return (
     <Page ref={containerRef}>
       <PageContent>
-        <div className="p-4 space-y-4">
+        <ScrollView className="p-4 space-y-4">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Footer Buttons
           </p>
@@ -51,7 +51,7 @@ export function FooterButtonsPreview() {
               ? "Opens a sheet with buttons inside. Drag to expand and reveal more content."
               : "Footer buttons stick to the bottom of the screen."}
           </p>
-        </div>
+        </ScrollView>
       </PageContent>
 
       {mode === "two" && (
