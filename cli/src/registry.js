@@ -153,6 +153,12 @@ export const registry = {
     internalDeps: ["bottom-sheet", "calendar", "separator"],
     description: "Modal date picker presenting a calendar inside a bottom sheet.",
   },
+  "time-picker": {
+    file: "time-picker.tsx",
+    dependencies: ["framer-motion", "react-modal-sheet", "@radix-ui/react-slot", "clsx", "tailwind-merge"],
+    internalDeps: ["bottom-sheet", "separator"],
+    description: "iOS-style scroll wheel time picker with 12h/24h formats.",
+  },
   navigation: {
     file: "navigation/",
     dependencies: ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],

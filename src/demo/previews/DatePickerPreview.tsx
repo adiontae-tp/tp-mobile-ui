@@ -21,8 +21,8 @@ export function DatePickerPreview() {
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col gap-6 overflow-hidden p-4"
-      style={{ minHeight: 480, transform: "translateZ(0)" }}
+      className="relative flex min-h-full flex-col gap-6 overflow-hidden p-4"
+      style={{ transform: "translateZ(0)" }}
     >
       {/* Single date picker */}
       <div className="flex flex-col gap-2">

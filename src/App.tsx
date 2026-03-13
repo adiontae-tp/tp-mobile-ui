@@ -30,6 +30,7 @@ import { FooterButtonsDemo } from "@/demo/pages/FooterButtonsDemo";
 import { ChatDemo } from "@/demo/pages/ChatDemo";
 import { CalendarDemo } from "@/demo/pages/CalendarDemo";
 import { DatePickerDemo } from "@/demo/pages/DatePickerDemo";
+import { TimePickerDemo } from "@/demo/pages/TimePickerDemo";
 
 // Mobile previews
 import { PreviewIndex } from "@/demo/pages/PreviewIndex";
@@ -58,6 +59,7 @@ import { FooterButtonsPreview } from "@/demo/previews/FooterButtonsPreview";
 import { ChatPreview } from "@/demo/previews/ChatPreview";
 import { CalendarPreview } from "@/demo/previews/CalendarPreview";
 import { DatePickerPreview } from "@/demo/previews/DatePickerPreview";
+import { TimePickerPreview } from "@/demo/previews/TimePickerPreview";
 
 function App() {
   return (
@@ -91,6 +93,7 @@ function App() {
           <Route path="chat" element={<ChatDemo />} />
           <Route path="calendar" element={<CalendarDemo />} />
           <Route path="date-picker" element={<DatePickerDemo />} />
+          <Route path="time-picker" element={<TimePickerDemo />} />
         </Route>
 
         {/* Mobile previews (full-screen, for phone testing) */}
@@ -121,6 +124,7 @@ function App() {
           <Route path="chat" element={<ChatPreview />} />
           <Route path="calendar" element={<CalendarPreview />} />
           <Route path="date-picker" element={<DatePickerPreview />} />
+          <Route path="time-picker" element={<TimePickerPreview />} />
         </Route>
       </Routes>
       <Toaster />

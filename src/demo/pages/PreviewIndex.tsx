@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import packageJson from "../../../package.json";
 
 const sections = [
   {
@@ -26,6 +27,7 @@ const sections = [
       { path: "checkbox", title: "Checkbox" },
       { path: "calendar", title: "Calendar" },
       { path: "date-picker", title: "Date Picker" },
+      { path: "time-picker", title: "Time Picker" },
     ],
   },
   {
@@ -84,6 +86,9 @@ export function PreviewIndex() {
           ))}
         </div>
       ))}
+      <div className="px-4 py-6 text-center">
+        <span className="text-xs text-muted-foreground">v{packageJson.version}</span>
+      </div>
     </div>
   );
 }

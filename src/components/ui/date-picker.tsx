@@ -171,7 +171,7 @@ function DatePicker({
       <BottomSheet
         open={openProp}
         onOpenChange={handleOpenChange}
-        modal={!container}
+        modal
         container={container}
         detents={["content"]}
       >
@@ -198,7 +198,7 @@ function DatePicker({
 
           {needsConfirm && (
             <>
-              <Separator className="my-3" />
+              <Separator className="my-2" />
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -217,6 +217,7 @@ function DatePicker({
               </div>
             </>
           )}
+          <div className="h-2" />
         </BottomSheetContent>
       </BottomSheet>
     </DatePickerContext.Provider>

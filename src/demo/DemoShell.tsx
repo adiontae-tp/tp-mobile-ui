@@ -33,6 +33,7 @@ const navSections = [
       { path: "/checkbox", label: "Checkbox" },
       { path: "/calendar", label: "Calendar" },
       { path: "/date-picker", label: "Date Picker" },
+      { path: "/time-picker", label: "Time Picker" },
     ],
   },
   {

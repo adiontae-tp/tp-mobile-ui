@@ -305,13 +305,13 @@ const CalendarHeader = React.forwardRef<HTMLDivElement, CalendarHeaderProps>(
     return (
       <div
         ref={ref}
-        className={cn("flex items-center justify-between px-1 py-2", className)}
+        className={cn("flex items-center justify-between px-1 py-1", className)}
         {...props}
       >
         <button
           type="button"
           onClick={() => changeMonth(-1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all active:scale-90 active:bg-accent"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-all active:scale-90 active:bg-accent"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -334,7 +334,7 @@ const CalendarHeader = React.forwardRef<HTMLDivElement, CalendarHeaderProps>(
         <button
           type="button"
           onClick={() => changeMonth(1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all active:scale-90 active:bg-accent"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-all active:scale-90 active:bg-accent"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -459,7 +459,7 @@ const CalendarGrid = React.forwardRef<
           >
             {cells.map((day, i) => {
               if (!day) {
-                return <span key={`empty-${i}`} className="h-10" />;
+                return <span key={`empty-${i}`} className="h-9" />;
               }
 
               const today = isToday(day);
@@ -476,7 +476,7 @@ const CalendarGrid = React.forwardRef<
                   disabled={disabled}
                   onClick={() => handleDayClick(day)}
                   className={cn(
-                    "relative flex h-10 items-center justify-center text-sm font-medium transition-colors",
+                    "relative flex h-9 items-center justify-center text-sm font-medium transition-colors",
                     disabled && "pointer-events-none opacity-30",
                     !sel && !inRange && !today && "active:bg-accent",
                     inRange && "bg-primary/10",

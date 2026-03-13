@@ -27,6 +27,7 @@ const initialMessages: Message[] = [
   { id: "4", variant: "received", text: "Let's do 12:30?", time: "10:32 AM" },
   { id: "5", variant: "sent", text: "Perfect, see you there!\nI'll grab us a table", time: "10:32 AM" },
   { id: "6", variant: "received", text: "\u{1F60B}\u{1F37C}", time: "10:33 AM" },
+  { id: "7", variant: "sent", text: "\u{1F44D}\u{1F525}", time: "10:33 AM" },
 ];
 
 function formatTime() {
@@ -89,7 +90,7 @@ export function ChatPreview() {
           {messages.map((msg, i) => {
             const isEnd = groupEnds[i];
             return (
-              <ChatMessage key={msg.id} variant={msg.variant} isGroupEnd={isEnd}>
+              <ChatMessage key={msg.id} variant={msg.variant} isGroupEnd={isEnd} animated>
                 {msg.variant === "received" && (
                   <ChatMessageAvatar fallback="A" />
                 )}

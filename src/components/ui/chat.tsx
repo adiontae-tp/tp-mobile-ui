@@ -21,7 +21,8 @@ type ChatVariant = "sent" | "received";
 const ChatMessageContext = React.createContext<{
   variant: ChatVariant;
   isGroupEnd: boolean;
-}>({ variant: "received", isGroupEnd: true });
+  emojiOnly: boolean;
+}>({ variant: "received", isGroupEnd: true, emojiOnly: false });
 
 function useChatMessage() {
   return React.useContext(ChatMessageContext);
@@ -54,6 +55,7 @@ function useLongPress(
         setPressed(true);
         timerRef.current = setTimeout(() => {
           if (activeRef.current) {
+            navigator.vibrate?.(10);
             onLongPress(e);
             clear();
           }
@@ -145,10 +147,10 @@ const ChatMessageList = React.forwardRef<HTMLDivElement, ChatMessageListProps>(
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.15 }}
               onClick={scrollToBottom}
-              className="absolute bottom-3 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm active:bg-accent"
+              className="absolute bottom-3 left-1/2 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm active:bg-accent"
               aria-label="Scroll to bottom"
             >
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </motion.button>
           )}
         </AnimatePresence>
@@ -164,23 +166,36 @@ interface ChatMessageProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: ChatVariant;
   /** Last message in a consecutive group from the same sender. Controls tail shape and spacing. Default true. */
   isGroupEnd?: boolean;
+  /** Enable entrance animation. Default false. */
+  animated?: boolean;
 }
 
 const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
-  ({ className, variant = "received", isGroupEnd = true, ...props }, ref) => (
-    <ChatMessageContext.Provider value={{ variant, isGroupEnd }}>
-      <div
-        ref={ref}
-        className={cn(
-          "flex items-end gap-1.5",
-          variant === "sent" ? "flex-row-reverse" : "flex-row",
-          isGroupEnd ? "mb-3" : "mb-0.5",
-          className
+  ({ className, variant = "received", isGroupEnd = true, animated = false, ...props }, ref) => {
+    const sharedClassName = cn(
+      "flex items-end gap-1.5",
+      variant === "sent" ? "flex-row-reverse" : "flex-row",
+      isGroupEnd ? "mb-3" : "mb-0.5",
+      className
+    );
+
+    return (
+      <ChatMessageContext.Provider value={{ variant, isGroupEnd, emojiOnly: false }}>
+        {animated ? (
+          <motion.div
+            ref={ref}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={sharedClassName}
+            {...props}
+          />
+        ) : (
+          <div ref={ref} className={sharedClassName} {...props} />
         )}
-        {...props}
-      />
-    </ChatMessageContext.Provider>
-  )
+      </ChatMessageContext.Provider>
+    );
+  }
 );
 ChatMessage.displayName = "ChatMessage";
 
@@ -248,40 +263,49 @@ const ChatMessageBubble = React.forwardRef<
       : "rounded-bl-[4px]"
     : "";
 
+  const emojiContext = React.useMemo(
+    () => ({ variant, isGroupEnd, emojiOnly: autoEmojiOnly }),
+    [variant, isGroupEnd, autoEmojiOnly]
+  );
+
   if (autoEmojiOnly) {
     return (
-      <div
-        ref={ref}
-        className={cn(
-          "max-w-[78%] select-none px-1 py-0.5",
-          pressed && "scale-95",
-          "transition-transform duration-100",
-          className
-        )}
-        {...handlers}
-        {...props}
-      >
-        {children}
-      </div>
+      <ChatMessageContext.Provider value={emojiContext}>
+        <div
+          ref={ref}
+          className={cn(
+            "max-w-[78%] select-none px-1 py-0.5",
+            pressed && "scale-95",
+            "transition-transform duration-100",
+            className
+          )}
+          {...handlers}
+          {...props}
+        >
+          {children}
+        </div>
+      </ChatMessageContext.Provider>
     );
   }
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        "max-w-[78%] select-none rounded-[18px] px-3 py-2",
-        isSent
-          ? "bg-primary text-primary-foreground"
-          : "bg-secondary text-secondary-foreground",
-        tail,
-        pressed && "scale-[0.97] brightness-95",
-        "transition-transform duration-100",
-        className
-      )}
-      {...handlers}
-      {...props}
-    />
+    <ChatMessageContext.Provider value={emojiContext}>
+      <div
+        ref={ref}
+        className={cn(
+          "max-w-[78%] select-none rounded-[18px] px-3 py-2",
+          isSent
+            ? "bg-primary text-primary-foreground"
+            : "bg-secondary text-secondary-foreground",
+          tail,
+          pressed && "scale-[0.97] opacity-90",
+          "transition-[transform,opacity] duration-100",
+          className
+        )}
+        {...handlers}
+        {...props}
+      />
+    </ChatMessageContext.Provider>
   );
 });
 ChatMessageBubble.displayName = "ChatMessageBubble";
@@ -325,16 +349,16 @@ const ChatMessageTimestamp = React.forwardRef<
   HTMLSpanElement,
   React.HTMLAttributes<HTMLSpanElement>
 >(({ className, ...props }, ref) => {
-  const { variant } = useChatMessage();
+  const { variant, emojiOnly } = useChatMessage();
 
   return (
     <span
       ref={ref}
       className={cn(
         "mt-1 block text-[10px] leading-none",
-        variant === "sent"
-          ? "text-right text-primary-foreground/60"
-          : "text-muted-foreground",
+        emojiOnly || variant !== "sent"
+          ? "text-muted-foreground"
+          : "text-right text-primary-foreground/60",
         className
       )}
       {...props}
@@ -365,9 +389,9 @@ const ChatTypingIndicator = React.forwardRef<
     {visible && (
       <motion.div
         ref={ref}
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: "auto" }}
-        exit={{ opacity: 0, height: 0 }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
         transition={{ duration: 0.2 }}
         className={cn("flex items-end gap-1.5 overflow-hidden px-3 pb-2", className)}
         {...props}
@@ -425,6 +449,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
       const trimmed = (value ?? "").trim();
       if (!trimmed) return;
       onSend?.(trimmed);
+      innerRef.current?.focus();
     }, [value, onSend]);
 
     const handleKeyDown = React.useCallback(
@@ -447,7 +472,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           className
         )}
       >
-        <div className="relative min-h-[36px] flex-1">
+        <div className="relative min-h-[44px] flex-1">
           <textarea
             ref={innerRef}
             value={value}
@@ -456,7 +481,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
             placeholder={placeholder}
             rows={1}
             className={cn(
-              "max-h-[120px] min-h-[36px] w-full resize-none bg-secondary px-4 py-2 text-[15px] leading-snug placeholder:text-muted-foreground focus-visible:outline-none appearance-none",
+              "max-h-[120px] min-h-[44px] w-full resize-none bg-secondary px-4 py-2 text-[15px] leading-snug placeholder:text-muted-foreground focus-visible:outline-none appearance-none",
               isMultiline ? "rounded-2xl" : "rounded-full"
             )}
             {...props}
@@ -467,7 +492,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           onClick={handleSend}
           disabled={!hasValue}
           aria-label="Send message"
-          className="mb-px flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
+          className="mb-px flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
           animate={{ scale: hasValue ? 1 : 0.85 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
         >
