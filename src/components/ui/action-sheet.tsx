@@ -38,7 +38,7 @@ function ActionSheet({
   };
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} modal={!container} container={container}>
+    <BottomSheet open={open} onOpenChange={onOpenChange} modal={!container} container={container} detents={["content"]}>
       {children && <BottomSheetTrigger asChild>{children}</BottomSheetTrigger>}
       <BottomSheetContent>
         <div className="flex flex-col">

@@ -27,6 +27,9 @@ import { DrawerDemo } from "@/demo/pages/DrawerDemo";
 import { ListDemo } from "@/demo/pages/ListDemo";
 import { WeekCalendarDemo } from "@/demo/pages/WeekCalendarDemo";
 import { FooterButtonsDemo } from "@/demo/pages/FooterButtonsDemo";
+import { ChatDemo } from "@/demo/pages/ChatDemo";
+import { CalendarDemo } from "@/demo/pages/CalendarDemo";
+import { DatePickerDemo } from "@/demo/pages/DatePickerDemo";
 
 // Mobile previews
 import { PreviewIndex } from "@/demo/pages/PreviewIndex";
@@ -52,6 +55,9 @@ import { DrawerPreview } from "@/demo/previews/DrawerPreview";
 import { ListPreview } from "@/demo/previews/ListPreview";
 import { WeekCalendarPreview } from "@/demo/previews/WeekCalendarPreview";
 import { FooterButtonsPreview } from "@/demo/previews/FooterButtonsPreview";
+import { ChatPreview } from "@/demo/previews/ChatPreview";
+import { CalendarPreview } from "@/demo/previews/CalendarPreview";
+import { DatePickerPreview } from "@/demo/previews/DatePickerPreview";
 
 function App() {
   return (
@@ -82,6 +88,9 @@ function App() {
           <Route path="list" element={<ListDemo />} />
           <Route path="week-calendar" element={<WeekCalendarDemo />} />
           <Route path="footer-buttons" element={<FooterButtonsDemo />} />
+          <Route path="chat" element={<ChatDemo />} />
+          <Route path="calendar" element={<CalendarDemo />} />
+          <Route path="date-picker" element={<DatePickerDemo />} />
         </Route>
 
         {/* Mobile previews (full-screen, for phone testing) */}
@@ -109,6 +118,9 @@ function App() {
           <Route path="list" element={<ListPreview />} />
           <Route path="week-calendar" element={<WeekCalendarPreview />} />
           <Route path="footer-buttons" element={<FooterButtonsPreview />} />
+          <Route path="chat" element={<ChatPreview />} />
+          <Route path="calendar" element={<CalendarPreview />} />
+          <Route path="date-picker" element={<DatePickerPreview />} />
         </Route>
       </Routes>
       <Toaster />

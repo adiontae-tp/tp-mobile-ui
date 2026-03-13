@@ -31,6 +31,8 @@ const navSections = [
     items: [
       { path: "/switch", label: "Switch" },
       { path: "/checkbox", label: "Checkbox" },
+      { path: "/calendar", label: "Calendar" },
+      { path: "/date-picker", label: "Date Picker" },
     ],
   },
   {
@@ -50,6 +52,12 @@ const navSections = [
       { path: "/action-sheet", label: "Action Sheet" },
       { path: "/toast", label: "Toast" },
       { path: "/toolbar-sheet", label: "Toolbar Sheet" },
+    ],
+  },
+  {
+    title: "Communication",
+    items: [
+      { path: "/chat", label: "Chat" },
     ],
   },
   {

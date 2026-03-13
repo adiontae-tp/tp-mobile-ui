@@ -7,53 +7,28 @@ import { Button } from "@/components/ui/button";
 
 export function BottomSheetPreview() {
   const [open, setOpen] = useState(false);
-  const [snappable, setSnappable] = useState(false);
-  const [nonModal, setNonModal] = useState(false);
-  const [snapIndex, setSnapIndex] = useState(0);
+  const [snapIndex, setSnapIndex] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div ref={containerRef} className="relative flex flex-col gap-4 p-4" style={{ minHeight: 480 }}>
       <p className="text-sm text-muted-foreground">
-        Drag the handle down to dismiss, or tap the overlay.
+        Drag up and down to snap between detents. Swipe down to dismiss.
       </p>
 
-      <BottomSheet open={open} onOpenChange={setOpen} modal={false} container={containerRef.current}>
-        <BottomSheetTrigger asChild>
-          <Button>Open Bottom Sheet</Button>
-        </BottomSheetTrigger>
-        <BottomSheetContent>
-          <BottomSheetHeader>
-            <BottomSheetTitle>Sheet Title</BottomSheetTitle>
-            <BottomSheetDescription>
-              This is a draggable bottom sheet with spring physics.
-            </BottomSheetDescription>
-          </BottomSheetHeader>
-          <div className="flex flex-col gap-3 py-4">
-            <p className="text-sm">
-              Bottom sheets are a common mobile pattern for contextual content
-              without leaving the current screen.
-            </p>
-            <Button onClick={() => setOpen(false)}>Done</Button>
-          </div>
-        </BottomSheetContent>
-      </BottomSheet>
-
       <BottomSheet
-        open={snappable}
-        onOpenChange={setSnappable}
-        modal={false}
-        container={containerRef.current}
+        open={open}
+        onOpenChange={setOpen}
         detents={["25%", "50%", "85%"]}
         defaultDetent={1}
         onDetentChange={setSnapIndex}
       >
         <BottomSheetTrigger asChild>
-          <Button variant="secondary">With Detents</Button>
+          <Button>Open Bottom Sheet</Button>
         </BottomSheetTrigger>
         <BottomSheetContent>
           <BottomSheetHeader>
-            <BottomSheetTitle>Detents (Snap Points)</BottomSheetTitle>
+            <BottomSheetTitle>Bottom Sheet</BottomSheetTitle>
             <BottomSheetDescription>
               Snapped to: {["25%", "50%", "85%"][snapIndex]} of viewport
             </BottomSheetDescription>
@@ -68,28 +43,7 @@ export function BottomSheetPreview() {
               nearest detent, with velocity bias toward the direction
               you're dragging.
             </p>
-            <Button onClick={() => setSnappable(false)}>Done</Button>
-          </div>
-        </BottomSheetContent>
-      </BottomSheet>
-
-      <BottomSheet open={nonModal} onOpenChange={setNonModal} modal={false} container={containerRef.current}>
-        <BottomSheetTrigger asChild>
-          <Button variant="outline">Non-modal (interact behind)</Button>
-        </BottomSheetTrigger>
-        <BottomSheetContent>
-          <BottomSheetHeader>
-            <BottomSheetTitle>Non-modal Sheet</BottomSheetTitle>
-            <BottomSheetDescription>
-              No overlay — you can still interact with the content behind.
-            </BottomSheetDescription>
-          </BottomSheetHeader>
-          <div className="flex flex-col gap-3 py-4">
-            <p className="text-sm">
-              Set <code className="rounded bg-muted px-1 text-xs">modal=false</code> to
-              skip the dimmed overlay and allow passthrough interaction.
-            </p>
-            <Button onClick={() => setNonModal(false)}>Done</Button>
+            <Button onClick={() => setOpen(false)}>Done</Button>
           </div>
         </BottomSheetContent>
       </BottomSheet>

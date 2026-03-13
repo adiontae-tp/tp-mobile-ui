@@ -10,7 +10,7 @@ const usage = `import {
 
 const [open, setOpen] = useState(false)
 
-// Basic usage
+// Default detents (25%, 50%, 90%)
 <BottomSheet open={open} onOpenChange={setOpen}>
   <BottomSheetTrigger asChild>
     <Button>Open Sheet</Button>
@@ -19,22 +19,20 @@ const [open, setOpen] = useState(false)
     <BottomSheetHeader>
       <BottomSheetTitle>Title</BottomSheetTitle>
       <BottomSheetDescription>
-        Drag down or tap outside to dismiss.
+        Drag to snap between detents.
       </BottomSheetDescription>
     </BottomSheetHeader>
     <p>Sheet content here.</p>
   </BottomSheetContent>
 </BottomSheet>
 
-// With detents (iOS-style snap points)
+// Custom detents
 <BottomSheet
-  open={open}
-  onOpenChange={setOpen}
   detents={["25%", "50%", "85%"]}
   defaultDetent={1}
   onDetentChange={(index) => console.log(index)}
 >
-  <BottomSheetContent>...</BottomSheetContent>
+  ...
 </BottomSheet>
 
 // Pixel + percentage detents
@@ -51,7 +49,7 @@ export function BottomSheetDemo() {
   return (
     <ComponentPage
       title="Bottom Sheet"
-      description="Native-feeling draggable bottom sheet with spring physics, multiple detents, and proper drag-scroll handoff. Supports pixel, percentage, and content-based snap points. No Radix Dialog dependency — built for persistent, non-modal use cases alongside traditional modal sheets."
+      description="Native-feeling draggable bottom sheet with multiple detents (snap points). Built on react-modal-sheet for smooth drag physics and proper scroll handoff. Every sheet has detents by default — drag up and down to snap between them, swipe down to dismiss."
       usage={usage}
     >
       <BottomSheetPreview />

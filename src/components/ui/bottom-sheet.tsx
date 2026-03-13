@@ -21,6 +21,8 @@ interface BottomSheetContextValue {
   modal: boolean;
   activeDetentIndex: number;
   setDetent: (index: number) => void;
+  /** Update detent state without calling snapTo (avoids feedback loop with onSnap). */
+  setDetentState: (index: number) => void;
   dismiss: () => void;
   sheetRef: React.RefObject<SheetRef | null>;
   detents: Detent[];
@@ -63,7 +65,7 @@ interface BottomSheetProps {
   defaultOpen?: boolean;
   /** When false, no overlay and content behind remains interactive. @default true */
   modal?: boolean;
-  /** Snap detents. @default ["90%"] */
+  /** Snap detents. @default ["25%", "50%", "90%"] */
   detents?: Detent[];
   /** Controlled active detent index (into sorted detents). */
   activeDetent?: number;
@@ -83,7 +85,7 @@ function BottomSheet({
   onOpenChange,
   defaultOpen = false,
   modal = true,
-  detents: detentsProp = ["90%"],
+  detents: detentsProp = ["25%", "50%", "90%"],
   activeDetent: activeDetentProp,
   defaultDetent,
   onDetentChange,
@@ -127,38 +129,53 @@ function BottomSheet({
     return () => window.removeEventListener("resize", update);
   }, [getContainerHeight]);
 
-  // Resolve detents to pixel snap points for react-modal-sheet
-  // react-modal-sheet uses snap points as distances from TOP, so we convert
-  const resolvedSnapPoints = React.useMemo(() => {
+  // Resolve detents to pixel heights, sorted ascending (smallest first)
+  const resolvedHeights = React.useMemo(() => {
     const hasContent = detentsProp.includes("content");
-    if (hasContent) return []; // Let react-modal-sheet handle content sizing
-
-    // Parse to pixel heights, sort ascending
-    const heights = detentsProp
+    if (hasContent) return [];
+    return detentsProp
       .map((d) => parseDetent(d, containerHeight))
       .sort((a, b) => a - b);
-
-    // react-modal-sheet snapPoints: distance from top of viewport
-    // height 400 in a 800px viewport = snapPoint at 400 (from top)
-    return heights.map((h) => containerHeight - h);
   }, [detentsProp, containerHeight]);
 
-  // Map our detent index to react-modal-sheet snap index
-  // Our detents are sorted ascending (smallest first), snap points are distances from top (largest first)
-  // So our index 0 (smallest height) = last snap point index, our last = first snap point
+  // react-modal-sheet snapPoints: distances from TOP, sorted ascending
+  // (smallest distance = tallest sheet, largest distance = shortest sheet)
+  const resolvedSnapPoints = React.useMemo(() => {
+    if (resolvedHeights.length === 0) return [];
+    // Reverse so tallest (largest height) comes first as smallest distance from top
+    return [...resolvedHeights].reverse().map((h) => containerHeight - h);
+  }, [resolvedHeights, containerHeight]);
+
+  // Our detent index (ascending by height) ↔ snap index (ascending by distance from top)
+  // detent 0 = smallest height = largest distance from top = last snap index
   const toSheetSnapIndex = React.useCallback(
     (detentIdx: number) => resolvedSnapPoints.length - 1 - detentIdx,
     [resolvedSnapPoints.length]
   );
 
-  const setDetent = React.useCallback(
+  const fromSheetSnapIndex = React.useCallback(
+    (snapIdx: number) => resolvedSnapPoints.length - 1 - snapIdx,
+    [resolvedSnapPoints.length]
+  );
+
+  // setDetent: only updates state, does NOT call snapTo (avoids feedback loop with onSnap)
+  const setDetentState = React.useCallback(
     (index: number) => {
       const clamped = Math.max(0, Math.min(index, detentsProp.length - 1));
       if (!isControlledDetent) setInternalDetentIndex(clamped);
       onDetentChange?.(clamped);
+    },
+    [detentsProp.length, isControlledDetent, onDetentChange]
+  );
+
+  // setDetent: updates state AND programmatically snaps
+  const setDetent = React.useCallback(
+    (index: number) => {
+      setDetentState(index);
+      const clamped = Math.max(0, Math.min(index, detentsProp.length - 1));
       sheetRef.current?.snapTo(toSheetSnapIndex(clamped));
     },
-    [detentsProp.length, isControlledDetent, onDetentChange, toSheetSnapIndex]
+    [setDetentState, detentsProp.length, toSheetSnapIndex]
   );
 
   const dismiss = React.useCallback(() => {
@@ -193,6 +210,7 @@ function BottomSheet({
       modal,
       activeDetentIndex,
       setDetent,
+      setDetentState,
       dismiss,
       sheetRef,
       detents: detentsProp,
@@ -204,7 +222,7 @@ function BottomSheet({
       descriptionId,
     }),
     [
-      isOpen, handleOpenChange, modal, activeDetentIndex, setDetent,
+      isOpen, handleOpenChange, modal, activeDetentIndex, setDetent, setDetentState,
       dismiss, detentsProp, resolvedSnapPoints, defaultDetentIndex,
       dismissible, container, titleId, descriptionId,
     ]
@@ -291,11 +309,11 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
       onClose?.();
     }, [onOpenChange, onClose]);
 
-    // Handle snap index changes from react-modal-sheet
+    // Handle snap index changes from react-modal-sheet (state only, no snapTo feedback loop)
     const handleSnap = React.useCallback(
       (snapIndex: number) => {
         const detentIdx = resolvedSnapPoints.length - 1 - snapIndex;
-        ctx.setDetent(detentIdx);
+        ctx.setDetentState(detentIdx);
       },
       [resolvedSnapPoints.length, ctx]
     );

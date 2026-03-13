@@ -24,6 +24,8 @@ const sections = [
     items: [
       { path: "switch", title: "Switch" },
       { path: "checkbox", title: "Checkbox" },
+      { path: "calendar", title: "Calendar" },
+      { path: "date-picker", title: "Date Picker" },
     ],
   },
   {
@@ -43,6 +45,12 @@ const sections = [
       { path: "action-sheet", title: "Action Sheet" },
       { path: "toast", title: "Toast" },
       { path: "toolbar-sheet", title: "Toolbar Sheet" },
+    ],
+  },
+  {
+    title: "Communication",
+    items: [
+      { path: "chat", title: "Chat" },
     ],
   },
   {

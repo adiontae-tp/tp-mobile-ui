@@ -135,6 +135,24 @@ export const registry = {
     internalDeps: [],
     description: "Swipeable week calendar with date selection.",
   },
+  chat: {
+    file: "chat.tsx",
+    dependencies: ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
+    internalDeps: ["avatar"],
+    description: "Mobile chat interface with message bubbles, typing indicator, and auto-growing input.",
+  },
+  calendar: {
+    file: "calendar.tsx",
+    dependencies: ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Full month calendar grid with single, range, and multiple selection modes.",
+  },
+  "date-picker": {
+    file: "date-picker.tsx",
+    dependencies: ["react-modal-sheet", "@radix-ui/react-slot", "clsx", "tailwind-merge"],
+    internalDeps: ["bottom-sheet", "calendar", "separator"],
+    description: "Modal date picker presenting a calendar inside a bottom sheet.",
+  },
   navigation: {
     file: "navigation/",
     dependencies: ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
