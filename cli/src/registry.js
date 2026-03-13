@@ -57,6 +57,12 @@ export const registry = {
     internalDeps: [],
     description: "Selection control built on Radix Checkbox.",
   },
+  page: {
+    file: "page.tsx",
+    dependencies: ["clsx", "tailwind-merge"],
+    internalDeps: [],
+    description: "Page layout container with content scroll area and bottom-anchored footer.",
+  },
   header: {
     file: "header.tsx",
     dependencies: ["clsx", "tailwind-merge"],

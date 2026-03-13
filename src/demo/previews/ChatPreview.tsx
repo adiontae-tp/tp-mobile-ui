@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import {
-  Chat,
   ChatMessageList,
   ChatMessage,
   ChatMessageAvatar,
@@ -10,6 +9,7 @@ import {
   ChatTypingIndicator,
   ChatInput,
 } from "@/components/ui/chat";
+import { Page, PageFooter } from "@/components/ui/page";
 import { ActionSheet } from "@/components/ui/action-sheet";
 import { Copy, RotateCcw, Trash2 } from "lucide-react";
 
@@ -84,8 +84,8 @@ export function ChatPreview() {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex h-full flex-col bg-background">
-      <Chat className="flex-1">
+    <Page ref={containerRef} className="bg-background">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ChatMessageList>
           {messages.map((msg, i) => {
             const isEnd = groupEnds[i];
@@ -106,13 +106,15 @@ export function ChatPreview() {
         </ChatMessageList>
 
         <ChatTypingIndicator visible={isTyping} />
+      </div>
 
+      <PageFooter>
         <ChatInput
           value={input}
           onValueChange={setInput}
           onSend={handleSend}
         />
-      </Chat>
+      </PageFooter>
 
       <ActionSheet
         open={actionOpen}
@@ -137,6 +139,6 @@ export function ChatPreview() {
           },
         ]}
       />
-    </div>
+    </Page>
   );
 }

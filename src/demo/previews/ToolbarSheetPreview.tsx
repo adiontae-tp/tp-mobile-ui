@@ -8,6 +8,7 @@ import {
   ToolbarSheetContent,
   type SnapPoint,
 } from "@/components/ui/toolbar-sheet";
+import { Page } from "@/components/ui/page";
 import { X, Volume2, Map, ChevronRight, Navigation } from "lucide-react";
 
 const steps = [
@@ -24,7 +25,7 @@ export function ToolbarSheetPreview() {
   const [snap, setSnap] = useState<SnapPoint>("peek");
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-muted/30">
+    <Page className="overflow-hidden bg-muted/30">
       {/* Simulated map background */}
       <div className="absolute inset-0 bg-gradient-to-b from-secondary/50 to-muted/80">
         <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
@@ -38,7 +39,7 @@ export function ToolbarSheetPreview() {
         </div>
       </div>
 
-      {/* Toolbar Sheet — parent is relative so absolute positioning works */}
+      {/* Toolbar Sheet — Page provides the relative positioning context */}
       <ToolbarSheet
         defaultSnap="peek"
         onSnapChange={setSnap}
@@ -91,6 +92,6 @@ export function ToolbarSheetPreview() {
             </div>
           </ToolbarSheetContent>
       </ToolbarSheet>
-    </div>
+    </Page>
   );
 }
