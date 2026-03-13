@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Moon, Sun, Menu, X } from "lucide-react";
+import packageJson from "../../package.json";
 
 const navSections = [
   {
@@ -128,7 +129,7 @@ export function DemoShell() {
             TP Mobile UI
           </Link>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-            v0.1
+            v{packageJson.version}
           </span>
         </div>
         <button
