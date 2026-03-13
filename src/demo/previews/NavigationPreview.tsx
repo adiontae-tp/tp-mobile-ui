@@ -166,7 +166,7 @@ function ComposeModal() {
 
 export function NavigationPreview() {
   return (
-    <div className="h-[540px] overflow-hidden rounded-lg border">
+    <div className="h-full overflow-hidden rounded-lg border">
       <ModalNavigator>
         <ModalNavigator.Screen name="compose" component={ComposeModal} />
         <TabNavigator initialTab="home">

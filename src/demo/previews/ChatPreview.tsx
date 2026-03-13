@@ -84,7 +84,7 @@ export function ChatPreview() {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex h-[480px] flex-col bg-background">
+    <div ref={containerRef} className="flex h-full flex-col bg-background">
       <Chat className="flex-1">
         <ChatMessageList>
           {messages.map((msg, i) => {

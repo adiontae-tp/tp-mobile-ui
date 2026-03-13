@@ -30,7 +30,7 @@ export function PreviewShell() {
           ) : undefined
         }
       />
-      <main className="flex-1 overflow-y-auto">
+      <main className="relative flex-1 overflow-y-auto">
         <Outlet />
       </main>
     </div>
