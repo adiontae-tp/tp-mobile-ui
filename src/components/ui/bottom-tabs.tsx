@@ -63,21 +63,29 @@ BottomTabs.displayName = "BottomTabs";
 
 /* ── Bar (bottom tab bar) ─────────────────────────────────────────── */
 
-const BottomTabsBar = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    role="tablist"
-    className={cn(
-      "flex shrink-0 items-end justify-around border-t bg-background/80 backdrop-blur-xl",
-      "pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))]",
-      className
-    )}
-    {...props}
-  />
-));
+interface BottomTabsBarProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Background color that fills the bar and the safe-area below it.
+   *  Accepts any CSS color value. When set, replaces the default
+   *  translucent background. */
+  fill?: string;
+}
+
+const BottomTabsBar = React.forwardRef<HTMLDivElement, BottomTabsBarProps>(
+  ({ fill, className, style, ...props }, ref) => (
+    <div
+      ref={ref}
+      role="tablist"
+      className={cn(
+        "flex shrink-0 items-end justify-around border-t",
+        !fill && "bg-background/80 backdrop-blur-xl",
+        "pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))]",
+        className
+      )}
+      style={fill ? { backgroundColor: fill, ...style } : style}
+      {...props}
+    />
+  )
+);
 BottomTabsBar.displayName = "BottomTabsBar";
 
 /* ── Content (tab panel) ─────────────────────────────────────────── */
