@@ -9,7 +9,7 @@ import {
   ChatTypingIndicator,
   ChatInput,
 } from "@/components/ui/chat";
-import { Page, PageFooter } from "@/components/ui/page";
+import { Page, PageContent, PageFooter } from "@/components/ui/page";
 import { ActionSheet } from "@/components/ui/action-sheet";
 import { Copy, RotateCcw, Trash2 } from "lucide-react";
 
@@ -85,7 +85,7 @@ export function ChatPreview() {
 
   return (
     <Page ref={containerRef} className="bg-background">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <PageContent>
         <ChatMessageList>
           {messages.map((msg, i) => {
             const isEnd = groupEnds[i];
@@ -104,9 +104,9 @@ export function ChatPreview() {
             );
           })}
         </ChatMessageList>
+      </PageContent>
 
-        <ChatTypingIndicator visible={isTyping} />
-      </div>
+      <ChatTypingIndicator visible={isTyping} />
 
       <PageFooter>
         <ChatInput

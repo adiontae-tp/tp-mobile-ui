@@ -26,11 +26,8 @@ interface BottomTabsProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Root container. Uses a flex-column layout that fills its parent:
- * content panels grow to fill available space above the tab bar.
- *
- * Set a height on this element (e.g. `h-dvh`, `h-full`, or a fixed height)
- * so the bar stays pinned to the bottom.
+ * Context provider for bottom tab state. Does not impose layout — use
+ * inside a Page with PageContent / PageFooter to position the bar.
  */
 function BottomTabs({
   value,
@@ -56,7 +53,7 @@ function BottomTabs({
     <BottomTabsContext.Provider
       value={{ value: activeValue, onValueChange: handleChange }}
     >
-      <div className={cn("flex h-full flex-col", className)} {...props}>
+      <div className={cn("contents", className)} {...props}>
         {children}
       </div>
     </BottomTabsContext.Provider>
@@ -83,7 +80,7 @@ const BottomTabsBar = React.forwardRef<
 ));
 BottomTabsBar.displayName = "BottomTabsBar";
 
-/* ── Content (page area above the bar) ────────────────────────────── */
+/* ── Content (tab panel) ─────────────────────────────────────────── */
 
 interface BottomTabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Show this content when the matching value is active. */
@@ -102,7 +99,7 @@ function BottomTabsContent({
   return (
     <div
       role="tabpanel"
-      className={cn("min-h-0 flex-1 overflow-y-auto", className)}
+      className={className}
       {...props}
     >
       {children}

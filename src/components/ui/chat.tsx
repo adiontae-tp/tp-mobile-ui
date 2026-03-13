@@ -76,13 +76,14 @@ function useLongPress(
 
 /* ----------------------------------- Chat ----------------------------------- */
 
+/** Semantic grouping wrapper. Does not impose layout — use inside a Page. */
 const Chat = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex h-full flex-col overflow-hidden", className)}
+    className={cn("contents", className)}
     {...props}
   />
 ));
@@ -126,12 +127,12 @@ const ChatMessageList = React.forwardRef<HTMLDivElement, ChatMessageListProps>(
     }, []);
 
     return (
-      <div className="relative min-h-0 flex-1">
+      <div className="relative h-full">
         <div
           ref={innerRef}
           onScroll={handleScroll}
           className={cn(
-            "flex h-full flex-col overflow-y-auto px-3 py-4",
+            "absolute inset-0 flex flex-col overflow-y-auto px-3 py-4",
             className
           )}
           {...props}
@@ -147,7 +148,7 @@ const ChatMessageList = React.forwardRef<HTMLDivElement, ChatMessageListProps>(
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.15 }}
               onClick={scrollToBottom}
-              className="absolute bottom-3 left-1/2 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm active:bg-accent"
+              className="absolute bottom-3 left-1/2 z-10 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm active:bg-accent"
               aria-label="Scroll to bottom"
             >
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
