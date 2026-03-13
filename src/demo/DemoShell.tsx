@@ -3,6 +3,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Moon, Sun, Menu, X } from "lucide-react";
 import packageJson from "../../package.json";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
 const navSections = [
   {
@@ -132,12 +133,15 @@ export function DemoShell() {
             v{packageJson.version}
           </span>
         </div>
-        <button
-          onClick={toggleDark}
-          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
-        >
-          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeSwitcher />
+          <button
+            onClick={toggleDark}
+            className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        </div>
       </header>
 
       <div className="flex">

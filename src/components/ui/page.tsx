@@ -21,7 +21,7 @@ const PageContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("relative min-h-0 flex-1 overflow-hidden", className)}
+      className={cn("relative flex min-h-0 flex-1 flex-col overflow-hidden", className)}
       {...props}
     />
   )
@@ -47,7 +47,7 @@ const ScrollView = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("absolute inset-0 overflow-y-auto overscroll-contain", className)}
+      className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", className)}
       {...props}
     />
   )

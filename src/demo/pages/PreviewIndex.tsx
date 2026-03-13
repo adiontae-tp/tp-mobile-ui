@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ScrollView } from "@/components/ui/page";
 import packageJson from "../../../package.json";
 
 const sections = [
@@ -67,7 +68,7 @@ const sections = [
 
 export function PreviewIndex() {
   return (
-    <div className="flex flex-col">
+    <ScrollView className="flex flex-col">
       {sections.map((section) => (
         <div key={section.title}>
           <div className="px-4 pt-4 pb-1">
@@ -89,6 +90,6 @@ export function PreviewIndex() {
       <div className="px-4 py-6 text-center">
         <span className="text-xs text-muted-foreground">v{packageJson.version}</span>
       </div>
-    </div>
+    </ScrollView>
   );
 }

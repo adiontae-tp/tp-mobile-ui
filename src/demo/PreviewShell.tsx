@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
 function getTitle(pathname: string): string {
   const name = pathname.replace("/preview/", "").replace(/-/g, " ");
@@ -29,8 +30,9 @@ export function PreviewShell() {
             </Button>
           ) : undefined
         }
+        rightAction={<ThemeSwitcher />}
       />
-      <main className="relative flex-1 overflow-hidden">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </main>
     </div>
