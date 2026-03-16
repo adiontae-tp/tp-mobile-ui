@@ -4,7 +4,7 @@ import { ChevronRight, Search, X } from "lucide-react";
 
 /* ─── Context ─────────────────────────────────────────────────────── */
 
-type ListVariant = "list" | "card" | "card-grid";
+type ListVariant = "list" | "card" | "card-grid" | "menu";
 
 const ListContext = React.createContext<ListVariant>("list");
 
@@ -26,6 +26,7 @@ const List = React.forwardRef<
         variant === "list" && inset && "mx-4 overflow-hidden rounded-lg border",
         variant === "card" && "flex flex-col gap-3 px-4",
         variant === "card-grid" && "grid grid-cols-2 gap-3 px-4",
+        variant === "menu" && "flex flex-col gap-6 px-4",
         className
       )}
       {...props}
@@ -79,21 +80,39 @@ interface ListSectionProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const ListSection = React.forwardRef<HTMLDivElement, ListSectionProps>(
-  ({ className, label, footer, children, ...props }, ref) => (
-    <div ref={ref} className={cn("", className)} {...props}>
-      {label && (
-        <div className="px-4 pb-1 pt-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </div>
-      )}
-      {children}
-      {footer && (
-        <div className="px-4 pb-4 pt-1.5 text-xs text-muted-foreground">
-          {footer}
-        </div>
-      )}
-    </div>
-  )
+  ({ className, label, footer, children, ...props }, ref) => {
+    const variant = React.useContext(ListContext);
+
+    return (
+      <div ref={ref} className={cn(variant === "menu" && "flex flex-col gap-2", className)} {...props}>
+        {label && (
+          <div
+            className={cn(
+              "text-xs font-semibold uppercase tracking-wider",
+              variant === "menu"
+                ? "px-1 pb-0.5 text-primary"
+                : "px-4 pb-1 pt-6 text-muted-foreground"
+            )}
+          >
+            {label}
+          </div>
+        )}
+        {variant === "menu" ? (
+          <div className="flex flex-col gap-2">{children}</div>
+        ) : (
+          children
+        )}
+        {footer && (
+          <div className={cn(
+            "text-xs text-muted-foreground",
+            variant === "menu" ? "px-1 pt-1" : "px-4 pb-4 pt-1.5"
+          )}>
+            {footer}
+          </div>
+        )}
+      </div>
+    );
+  }
 );
 ListSection.displayName = "ListSection";
 
@@ -142,6 +161,27 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
   ({ className, pressable, chevron, children, ...props }, ref) => {
     const variant = React.useContext(ListContext);
 
+    if (variant === "menu") {
+      return (
+        <div
+          ref={ref}
+          role="listitem"
+          className={cn(
+            "flex flex-row items-center gap-3 rounded-xl bg-card px-3 py-2.5 shadow-sm",
+            pressable &&
+              "cursor-pointer active:scale-[0.98] transition-transform duration-100",
+            className
+          )}
+          {...props}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3">{children}</div>
+          {chevron && (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+        </div>
+      );
+    }
+
     if (variant === "card" || variant === "card-grid") {
       return (
         <div
@@ -189,16 +229,23 @@ ListItem.displayName = "ListItem";
 const ListItemIcon = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground",
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const variant = React.useContext(ListContext);
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex shrink-0 items-center justify-center",
+        variant === "menu"
+          ? "h-9 w-9 rounded-lg bg-muted text-muted-foreground"
+          : "h-7 w-7 rounded-md bg-primary text-primary-foreground",
+        className
+      )}
+      {...props}
+    />
+  );
+});
 ListItemIcon.displayName = "ListItemIcon";
 
 /* ─── ListItemContent ─────────────────────────────────────────────── */

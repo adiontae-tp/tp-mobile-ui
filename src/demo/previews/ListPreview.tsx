@@ -15,6 +15,7 @@ import { Page, PageContent, ScrollView } from "@/components/ui/page";
 import {
   Wifi, Bluetooth, Bell, Shield, Globe, Moon,
   Image, Music, Film, Gamepad2,
+  CalendarDays, LayoutTemplate, FolderOpen, Tag, BarChart3, Lock,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 
@@ -141,6 +142,62 @@ export function ListPreview() {
                 ))}
               </List>
             </ListSection>
+
+            {/* Menu variant — card items with sections */}
+            <List variant="menu">
+              <ListSection label="Planning">
+                <ListItem pressable chevron>
+                  <ListItemIcon>
+                    <CalendarDays className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>Periods</ListItemTitle>
+                    <ListItemSubtitle>Reusable drills and activities</ListItemSubtitle>
+                  </ListItemContent>
+                </ListItem>
+                <ListItem pressable chevron>
+                  <ListItemIcon>
+                    <LayoutTemplate className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>Practice Templates</ListItemTitle>
+                    <ListItemSubtitle>Save complete practice plans</ListItemSubtitle>
+                  </ListItemContent>
+                </ListItem>
+              </ListSection>
+
+              <ListSection label="Management">
+                <ListItem pressable chevron>
+                  <ListItemIcon>
+                    <FolderOpen className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>Files</ListItemTitle>
+                    <ListItemSubtitle>Store and organize documents</ListItemSubtitle>
+                  </ListItemContent>
+                </ListItem>
+                <ListItem pressable chevron>
+                  <ListItemIcon>
+                    <Tag className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>Tags</ListItemTitle>
+                    <ListItemSubtitle>Track time by category</ListItemSubtitle>
+                  </ListItemContent>
+                </ListItem>
+                <ListItem pressable chevron>
+                  <ListItemIcon>
+                    <BarChart3 className="h-4 w-4" />
+                  </ListItemIcon>
+                  <ListItemContent>
+                    <ListItemTitle>
+                      Reports <Lock className="inline h-3 w-3 ml-1 text-muted-foreground" />
+                    </ListItemTitle>
+                    <ListItemSubtitle>View practice time distribution</ListItemSubtitle>
+                  </ListItemContent>
+                </ListItem>
+              </ListSection>
+            </List>
           </div>
         </ScrollView>
       </PageContent>

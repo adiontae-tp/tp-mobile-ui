@@ -193,7 +193,7 @@ const tools = {
           desktop: ">= 1024px (lg:)",
         },
         touchTarget: "2.75rem (44px) — use min-h-touch",
-        safeAreas: "pb-safe-bottom, pt-safe-top, pl-safe-left, pr-safe-right",
+        safeAreas: 'Bottom: pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))], Top: pt-safe-top. Do NOT use pb-safe-bottom (env() may not resolve in @theme tokens on iOS).',
         source: css,
       };
     },

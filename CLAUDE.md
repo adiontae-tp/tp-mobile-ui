@@ -36,13 +36,22 @@ src/
 
 Every screen must use the Page layout system for correct positioning on all devices (especially iOS PWA). Components do not own their own full-screen layout — they are designed to be placed into Page slots.
 
+### iOS PWA Viewport (`app.css`)
+
+The root viewport follows an Ionic-inspired pattern for edge-to-edge rendering on iOS standalone PWAs:
+
+- `html` has `min-height: calc(100% + env(safe-area-inset-top))` — compensates for iOS expanding the viewport upward behind the status bar without growing the document downward
+- `html` has `background-color: var(--background)` — fills the home indicator area with the app color instead of white
+- `body` is `position: fixed; overflow: hidden` on mobile (`< 768px`) — locks body to the physical screen and delegates all scrolling to `ScrollView` / component-level scroll containers
+- Desktop (`>= 768px`) uses normal document scrolling for the docs site
+
 ### Core Components (`page.tsx`)
 
 | Component | Role |
 |-----------|------|
-| `Page` | Sized flex-column container with positioning context and CSS containment |
+| `Page` | Absolutely-positioned flex-column container (`absolute inset-0`) with CSS containment — fills its nearest positioned ancestor |
 | `PageContent` | Non-scrollable content area (`flex-1`, `relative`, `overflow-hidden`) |
-| `ScrollView` | Scrollable region that fills its parent (`absolute inset-0`, `overflow-y-auto`) |
+| `ScrollView` | Scrollable region that fills its parent (`flex-1`, `overflow-y-auto`) |
 | `PageFooter` | Bottom-anchored slot (`shrink-0`), sits above safe area |
 
 ### Usage Patterns
@@ -104,12 +113,13 @@ Every screen must use the Page layout system for correct positioning on all devi
 ```
 
 ### Key Rules
-- **Page** is always the outermost layout container for a screen
+- **Page** uses `absolute inset-0` to fill its nearest positioned ancestor — ensure the parent has `position: relative` (or is itself absolutely/fixed positioned)
 - **PageContent** does NOT scroll — add `ScrollView` inside when scrolling is needed
 - Components like `BottomTabs` and `Chat` use `display: contents` — they provide context/state but no layout. Page handles layout.
 - Components with their own scroll (`ChatMessageList`) go directly inside `PageContent` without `ScrollView`
 - Bottom-anchored components (`FooterButtons`, `BottomTabsBar`, `ChatInput`) go in `PageFooter`
-- Overlay components (`ToolbarSheet`, `FooterSheet`, `ActionSheet`) work because `Page` provides `position: relative`
+- Overlay components (`ToolbarSheet`, `FooterSheet`, `ActionSheet`) work because `Page` establishes a positioning context
+- **Safe area bottom padding**: use the inline pattern `pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))]` — do NOT use `pb-safe-bottom` (the Tailwind `@theme` token may not resolve `env()` correctly at runtime on iOS)
 
 ## Components
 
@@ -154,7 +164,7 @@ Every component follows this pattern:
 - Has a `displayName`
 - Uses Tailwind classes with design token colors (`bg-background`, `text-primary`, etc.)
 - Touch targets: minimum `min-h-touch` (44px via `--spacing-touch`)
-- Safe areas: `pb-safe-bottom`, `pt-safe-top` where applicable
+- Safe areas: use `pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))]` for bottom, `pt-safe-top` for top
 - Components do NOT own full-screen layout — they are slots for the Page system
 
 ### Adding a New Component
