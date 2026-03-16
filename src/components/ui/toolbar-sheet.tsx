@@ -250,7 +250,7 @@ function ToolbarSheet({
       <motion.div
         ref={containerRef}
         className={cn(
-          "absolute inset-x-0 bottom-0 z-40 flex flex-col rounded-t-2xl bg-background/85 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] pb-safe-bottom touch-none",
+          "absolute inset-x-0 bottom-0 z-40 flex flex-col rounded-t-2xl bg-background/85 backdrop-blur-xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))] touch-none",
           className
         )}
         style={{

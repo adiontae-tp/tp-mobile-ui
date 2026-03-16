@@ -116,16 +116,23 @@ html {
 }
 
 body {
-  position: fixed;
-  width: 100%;
-  height: 100%;
   margin: 0;
   padding: 0 !important;
-  overflow: hidden;
   overscroll-behavior: none;
   scrollbar-width: none;          /* Firefox */
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Mobile: lock body so all scrolling is owned by ScrollView / components.
+   Desktop keeps normal document scrolling for the docs site. */
+@media (max-width: 767px) {
+  body {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
 }
 
 html::-webkit-scrollbar,

@@ -273,7 +273,7 @@ const DrawerFooter = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col gap-2 p-4 pt-2 pb-safe-bottom", className)}
+    className={cn("flex flex-col gap-2 p-4 pt-2 pb-[var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))]", className)}
     {...props}
   />
 );
