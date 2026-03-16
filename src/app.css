@@ -108,6 +108,15 @@ html, body {
   scrollbar-width: none;          /* Firefox */
 }
 
+/* iOS standalone PWA: extend the viewport behind the home indicator.
+   Without this, position:fixed and viewport units stop at the safe-area
+   boundary, leaving a ~34px gap at the bottom on notched iPhones. */
+@supports (-webkit-touch-callout: none) {
+  html {
+    min-height: calc(100% + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   display: none;                   /* Chrome, Safari, Edge */
