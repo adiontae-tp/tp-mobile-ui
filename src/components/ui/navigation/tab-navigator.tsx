@@ -81,32 +81,34 @@ function TabNavigator({ initialTab, children, className }: TabNavigatorProps) {
       <BottomTabs
         value={activeTab}
         onValueChange={handleTabPress}
-        className={cn("relative h-full", className)}
+        className={cn("h-full", className)}
       >
-        {/* Tab content — all tabs stay mounted, hidden via display:none */}
-        <div className="relative flex-1 overflow-hidden">
-          {tabs.map((tab) => (
-            <div
-              key={tab.name}
-              className="absolute inset-0"
-              style={{ display: activeTab === tab.name ? "block" : "none" }}
-            >
-              {tab.children}
-            </div>
-          ))}
-        </div>
+        <div className="flex h-full flex-col">
+          {/* Tab content — all tabs stay mounted, hidden via display:none */}
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {tabs.map((tab) => (
+              <div
+                key={tab.name}
+                className="absolute inset-0"
+                style={{ display: activeTab === tab.name ? "block" : "none" }}
+              >
+                {tab.children}
+              </div>
+            ))}
+          </div>
 
-        <BottomTabsBar>
-          {tabs.map((tab) => (
-            <BottomTabsTab
-              key={tab.name}
-              value={tab.name}
-              icon={tab.icon}
-              label={tab.label}
-              badge={tab.badge}
-            />
-          ))}
-        </BottomTabsBar>
+          <BottomTabsBar>
+            {tabs.map((tab) => (
+              <BottomTabsTab
+                key={tab.name}
+                value={tab.name}
+                icon={tab.icon}
+                label={tab.label}
+                badge={tab.badge}
+              />
+            ))}
+          </BottomTabsBar>
+        </div>
       </BottomTabs>
     </TabContext.Provider>
   );
