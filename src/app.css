@@ -97,34 +97,30 @@
 }
 
 /*
-  Prevent pull-to-refresh on iOS Safari / Android Chrome.
-  Must be on html (the root scroller on iOS) AND body.
-  overscroll-behavior: none blocks the navigation gesture entirely;
-  contain prevents chaining to the browser chrome while keeping
-  normal scroll behavior within the page.
+  Root viewport setup — follows the Ionic pattern for iOS PWA edge-to-edge.
+  body is position:fixed so it always fills the physical screen (including
+  behind the home indicator on notched iPhones). All document-level
+  scrolling is disabled; components like ScrollView own their own scroll.
 */
-html, body {
-  overscroll-behavior: none;
-  scrollbar-width: none;          /* Firefox */
+html {
+  width: 100%;
+  height: 100%;
 }
 
-/* iOS standalone PWA: extend the viewport behind the home indicator.
-   Without this, position:fixed and viewport units stop at the safe-area
-   boundary, leaving a ~34px gap at the bottom on notched iPhones. */
-@supports (-webkit-touch-callout: none) {
-  html {
-    min-height: calc(100% + env(safe-area-inset-bottom, 0px));
-  }
+body {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  scrollbar-width: none;          /* Firefox */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   display: none;                   /* Chrome, Safari, Edge */
-}
-
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
 }
 
 /* ── Mobile input fixes ──────────────────────────────────────────────── */

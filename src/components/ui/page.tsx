@@ -7,7 +7,7 @@ const Page = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("relative flex h-full flex-col", className)}
+      className={cn("absolute inset-0 flex flex-col", className)}
       style={{ contain: "layout size style" }}
       {...props}
     />

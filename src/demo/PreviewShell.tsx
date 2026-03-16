@@ -15,7 +15,7 @@ export function PreviewShell() {
   const isIndex = location.pathname === "/preview";
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background text-foreground">
+    <div className="absolute inset-0 flex flex-col bg-background text-foreground">
       <Header
         title={isIndex ? "TP Mobile UI" : getTitle(location.pathname)}
         leftAction={
