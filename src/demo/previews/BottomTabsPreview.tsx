@@ -75,7 +75,7 @@ export function BottomTabsPreview() {
           </ScrollView>
         </PageContent>
 
-        <PageFooter>
+        <PageFooter >
           <BottomTabsBar fill={fill} className={fill ? "text-white border-white/20" : ""}>
             <BottomTabsTab value="home" icon={<Home />} label="Home" />
             <BottomTabsTab value="search" icon={<Search />} label="Search" />

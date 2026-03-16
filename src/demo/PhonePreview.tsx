@@ -38,8 +38,8 @@ export function PhonePreview({ children, className }: PhonePreviewProps) {
               ["--safe-area-inset-top" as string]: "0px",
             }}
           >
-            {/* Scrollable content area */}
-            <div className="relative min-h-0 flex-1 overflow-y-auto">
+            {/* Content area — children (Page) fill this container */}
+            <div className="relative min-h-0 flex-1 overflow-hidden">
               {children}
             </div>
             {/* Home indicator overlay — sits on top of content */}
