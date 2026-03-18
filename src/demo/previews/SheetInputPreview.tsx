@@ -15,6 +15,7 @@ import {
   Hash,
   Search,
   Check,
+  User,
 } from "lucide-react";
 
 const categories = [
@@ -46,6 +47,11 @@ const countries = [
 
 export function SheetInputPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Name — simple text input
+  const [name, setName] = useState("");
+  const [nameOpen, setNameOpen] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   // Notes — textarea
   const [notes, setNotes] = useState("");
@@ -88,6 +94,44 @@ export function SheetInputPreview() {
       <PageContent>
         <ScrollView className="p-4">
           <div className="flex flex-col gap-6">
+            {/* Name — simple text input */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Name
+              </span>
+              <SheetInput
+                open={nameOpen}
+                onOpenChange={(open) => {
+                  if (open) setNameDraft(name);
+                  setNameOpen(open);
+                }}
+                title="Enter Name"
+                container={containerRef.current}
+              >
+                <SheetInputTrigger
+                  value={name}
+                  placeholder="Enter your name…"
+                  startIcon={<User className="h-4 w-4" />}
+                />
+                <div className="flex flex-col gap-3">
+                  <Input
+                    placeholder="Full name"
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    autoFocus
+                  />
+                  <Button
+                    onClick={() => {
+                      setName(nameDraft);
+                      setNameOpen(false);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </SheetInput>
+            </div>
+
             {/* Category — single select */}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
