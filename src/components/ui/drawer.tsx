@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useSheetManager } from "@/components/ui/sheet-manager";
 
 /* ── Context ─────────────────────────────────────────────────────── */
 
@@ -45,6 +46,8 @@ function Drawer({
   const [internalOpen, setInternalOpen] = React.useState(props.defaultOpen ?? false);
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
+  const sheetManager = useSheetManager();
+  const sheetId = React.useId();
 
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
@@ -53,6 +56,15 @@ function Drawer({
     },
     [isControlled, onOpenChange]
   );
+
+  // Register with global sheet manager
+  React.useEffect(() => {
+    if (isOpen) {
+      sheetManager?.request(sheetId, () => handleOpenChange(false));
+    } else {
+      sheetManager?.release(sheetId);
+    }
+  }, [isOpen, sheetId, sheetManager, handleOpenChange]);
 
   return (
     <DrawerContext.Provider

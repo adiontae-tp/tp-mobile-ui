@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DemoShell } from "@/demo/DemoShell";
 import { PreviewShell } from "@/demo/PreviewShell";
 import { Toaster } from "@/components/ui/toast";
+import { SheetManagerProvider } from "@/components/ui/sheet-manager";
 
 // Docs pages
 import { HomePage } from "@/demo/pages/HomePage";
@@ -32,6 +33,7 @@ import { CalendarDemo } from "@/demo/pages/CalendarDemo";
 import { DatePickerDemo } from "@/demo/pages/DatePickerDemo";
 import { TimePickerDemo } from "@/demo/pages/TimePickerDemo";
 import { SheetInputDemo } from "@/demo/pages/SheetInputDemo";
+import { TransitionDemo } from "@/demo/pages/TransitionDemo";
 
 // Mobile previews
 import { PreviewIndex } from "@/demo/pages/PreviewIndex";
@@ -62,9 +64,11 @@ import { CalendarPreview } from "@/demo/previews/CalendarPreview";
 import { DatePickerPreview } from "@/demo/previews/DatePickerPreview";
 import { TimePickerPreview } from "@/demo/previews/TimePickerPreview";
 import { SheetInputPreview } from "@/demo/previews/SheetInputPreview";
+import { TransitionPreview } from "@/demo/previews/TransitionPreview";
 
 function App() {
   return (
+    <SheetManagerProvider>
     <BrowserRouter>
       <Routes>
         {/* Docs site (desktop) */}
@@ -97,6 +101,7 @@ function App() {
           <Route path="date-picker" element={<DatePickerDemo />} />
           <Route path="time-picker" element={<TimePickerDemo />} />
           <Route path="sheet-input" element={<SheetInputDemo />} />
+          <Route path="transition" element={<TransitionDemo />} />
         </Route>
 
         {/* Mobile previews (full-screen, for phone testing) */}
@@ -129,10 +134,12 @@ function App() {
           <Route path="date-picker" element={<DatePickerPreview />} />
           <Route path="time-picker" element={<TimePickerPreview />} />
           <Route path="sheet-input" element={<SheetInputPreview />} />
+          <Route path="transition" element={<TransitionPreview />} />
         </Route>
       </Routes>
       <Toaster />
     </BrowserRouter>
+    </SheetManagerProvider>
   );
 }
 

@@ -65,6 +65,12 @@ const navSections = [
     ],
   },
   {
+    title: "Animation",
+    items: [
+      { path: "/transition", label: "Transition" },
+    ],
+  },
+  {
     title: "Layout",
     items: [
       { path: "/footer-buttons", label: "Footer Buttons" },

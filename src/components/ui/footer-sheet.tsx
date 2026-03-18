@@ -2,6 +2,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { motion, useMotionValue, animate, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useSheetManager } from "@/components/ui/sheet-manager";
 
 const springConfig = {
   type: "spring" as const,
@@ -61,6 +62,17 @@ function FooterSheet({
 }: FooterSheetProps) {
   const contained = container != null;
   const pos = contained ? "absolute" : "fixed";
+  const sheetManager = useSheetManager();
+  const sheetId = React.useId();
+
+  // Register with global sheet manager
+  React.useEffect(() => {
+    if (open) {
+      sheetManager?.request(sheetId, () => onOpenChange?.(false));
+    } else {
+      sheetManager?.release(sheetId);
+    }
+  }, [open, sheetId, sheetManager, onOpenChange]);
 
   // Resolve fractions to pixel heights based on container or viewport
   const getContainerHeight = React.useCallback(() => {

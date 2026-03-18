@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { TransitionType } from "./transitions";
 
 /* ── Route Entry ─────────────────────────────────────────────────── */
 
@@ -42,6 +43,8 @@ export interface ScreenDefinition {
   title?: string | ((params: Record<string, unknown>) => string);
   headerRight?: ReactNode;
   headerShown?: boolean;
+  /** Override the transition animation for this screen. */
+  transition?: TransitionType;
 }
 
 export interface StackScreenProps {
@@ -53,6 +56,8 @@ export interface StackScreenProps {
   headerRight?: ReactNode;
   /** Set to false to hide the built-in header for this screen. Defaults to true. */
   headerShown?: boolean;
+  /** Override the transition animation for this screen. Defaults to platform detection (iOS/Android). */
+  transition?: TransitionType;
 }
 
 export interface TabDefinition {

@@ -13,6 +13,9 @@ export { detectPlatform } from "./platform";
 // Optional router sync
 export { useRouterSync, useAndroidBack } from "./router-adapter";
 
+// Transitions
+export type { TransitionType, TabAnimation } from "./transitions";
+
 // Types
 export type {
   RouteEntry,

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   StackNavigator,
   TabNavigator,
@@ -5,12 +6,17 @@ import {
   SharedElement,
   useNavigation,
   useRoute,
+  type TransitionType,
 } from "@/components/ui/navigation";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Home, Search, User, Plus, X } from "lucide-react";
 
 /* ── Stack screens ───────────────────────────────────────────────── */
+
+const transitionTypes: TransitionType[] = [
+  "ios", "android", "fade", "slide-up", "slide-down", "zoom", "flip", "cover-vertical",
+];
 
 function FeedScreen() {
   const { push } = useNavigation();
@@ -165,38 +171,65 @@ function ComposeModal() {
 /* ── Main Preview ────────────────────────────────────────────────── */
 
 export function NavigationPreview() {
+  const [transition, setTransition] = useState<TransitionType>("ios");
+
   return (
-    <div className="h-full overflow-hidden rounded-lg border">
-      <ModalNavigator>
-        <ModalNavigator.Screen name="compose" component={ComposeModal} />
-        <TabNavigator initialTab="home">
-          <TabNavigator.Tab name="home" icon={<Home />} label="Home">
-            <StackNavigator initialRoute="feed">
-              <StackNavigator.Screen
-                name="feed"
-                component={FeedScreen}
-                title="Feed"
-              />
-              <StackNavigator.Screen
-                name="detail"
-                component={DetailScreen}
-                title={(params) => (params.title as string) || "Detail"}
-              />
-              <StackNavigator.Screen
-                name="nested"
-                component={NestedScreen}
-                title="Nested"
-              />
-            </StackNavigator>
-          </TabNavigator.Tab>
-          <TabNavigator.Tab name="search" icon={<Search />} label="Search">
-            <SearchScreen />
-          </TabNavigator.Tab>
-          <TabNavigator.Tab name="profile" icon={<User />} label="Profile">
-            <ProfileScreen />
-          </TabNavigator.Tab>
-        </TabNavigator>
-      </ModalNavigator>
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border">
+      {/* Transition picker */}
+      <div className="shrink-0 border-b bg-muted/30 px-3 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+          Stack Transition
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {transitionTypes.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTransition(t)}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                transition === t
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background border text-muted-foreground"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigator */}
+      <div className="flex-1 min-h-0">
+        <ModalNavigator>
+          <ModalNavigator.Screen name="compose" component={ComposeModal} />
+          <TabNavigator initialTab="home" animation="crossfade">
+            <TabNavigator.Tab name="home" icon={<Home />} label="Home">
+              <StackNavigator initialRoute="feed" transition={transition} key={transition}>
+                <StackNavigator.Screen
+                  name="feed"
+                  component={FeedScreen}
+                  title="Feed"
+                />
+                <StackNavigator.Screen
+                  name="detail"
+                  component={DetailScreen}
+                  title={(params) => (params.title as string) || "Detail"}
+                />
+                <StackNavigator.Screen
+                  name="nested"
+                  component={NestedScreen}
+                  title="Nested"
+                />
+              </StackNavigator>
+            </TabNavigator.Tab>
+            <TabNavigator.Tab name="search" icon={<Search />} label="Search">
+              <SearchScreen />
+            </TabNavigator.Tab>
+            <TabNavigator.Tab name="profile" icon={<User />} label="Profile">
+              <ProfileScreen />
+            </TabNavigator.Tab>
+          </TabNavigator>
+        </ModalNavigator>
+      </div>
     </div>
   );
 }

@@ -9,7 +9,12 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
 import { detectPlatform } from "./platform";
-import { getStackVariants, getStackSpring, iosShadowVariants } from "./transitions";
+import {
+  iosShadowVariants,
+  getTransitionVariants,
+  getTransitionSpring,
+  type TransitionType,
+} from "./transitions";
 import {
   stackReducer,
   createInitialStackState,
@@ -145,12 +150,13 @@ interface StackNavigatorProps {
   initialRoute: string;
   children: React.ReactNode;
   className?: string;
+  /** Default transition for all screens. Defaults to platform detection. */
+  transition?: TransitionType;
 }
 
-function StackNavigator({ initialRoute, children, className }: StackNavigatorProps) {
+function StackNavigator({ initialRoute, children, className, transition: defaultTransition }: StackNavigatorProps) {
   const platform = React.useMemo(() => detectPlatform(), []);
-  const variants = React.useMemo(() => getStackVariants(platform), [platform]);
-  const spring = React.useMemo(() => getStackSpring(platform), [platform]);
+  const platformDefault: TransitionType = platform === "android" ? "android" : "ios";
   const isIOS = platform !== "android";
 
   // Collect screen definitions from children
@@ -158,8 +164,8 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
     const map = new Map<string, ScreenDefinition>();
     React.Children.forEach(children, (child) => {
       if (React.isValidElement(child) && child.type === Screen) {
-        const { name, component, title, headerRight, headerShown } = child.props as StackScreenProps;
-        map.set(name, { name, component, title, headerRight, headerShown });
+        const { name, component, title, headerRight, headerShown, transition: screenTransition } = child.props as StackScreenProps;
+        map.set(name, { name, component, title, headerRight, headerShown, transition: screenTransition });
       }
     });
     return map;
@@ -190,31 +196,46 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
     []
   );
 
-  // iOS swipe-back gesture state.
-  // The parallax layer is only rendered during active swipe to prevent
-  // the below-screen from bleeding through after push/pop transitions.
+  // Resolve the active transition type for the current top screen
+  const topRoute = state.routes[state.routes.length - 1]!;
+  const currentScreen = screens.get(topRoute.name);
+  const activeTransition = currentScreen?.transition ?? defaultTransition ?? platformDefault;
+
+  const variants = React.useMemo(
+    () => getTransitionVariants(activeTransition),
+    [activeTransition]
+  );
+  const spring = React.useMemo(
+    () => getTransitionSpring(activeTransition),
+    [activeTransition]
+  );
+
+  // iOS swipe-back only works with iOS-style slide transitions
+  const supportsSwipeBack = isIOS && (activeTransition === "ios" || activeTransition === "cover-vertical");
+
+  // iOS swipe-back gesture state
   const swipeProgress = useMotionValue(0);
   const bgX = useTransform(swipeProgress, [0, 1], ["-30%", "0%"]);
   const isDragging = React.useRef(false);
   const [showParallax, setShowParallax] = React.useState(false);
 
-  // Pointer-based swipe-back: track the gesture manually so that
-  // we never bind a MotionValue to style.x on the AnimatePresence
-  // screen (which would override its variant-based animations).
   const pointerStart = React.useRef<{ x: number; y: number; id: number } | null>(null);
   const swipeX = useMotionValue(0);
 
+  // Swipe-back spring (always iOS for the gesture itself)
+  const swipeSpring = React.useMemo(() => getTransitionSpring("ios"), []);
+
   const handleEdgePointerDown = React.useCallback(
     (e: React.PointerEvent) => {
-      if (!isIOS || state.routes.length <= 1) return;
+      if (!supportsSwipeBack || state.routes.length <= 1) return;
       const rect = containerRef.current?.getBoundingClientRect();
       const relX = rect ? e.clientX - rect.left : e.clientX;
       if (relX > EDGE_ZONE_WIDTH + 20) return;
       pointerStart.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
-      isDragging.current = false; // not confirmed yet — wait for direction lock
+      isDragging.current = false;
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [isIOS, state.routes.length]
+    [supportsSwipeBack, state.routes.length]
   );
 
   const handlePointerMove = React.useCallback(
@@ -223,12 +244,10 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
       const dx = e.clientX - pointerStart.current.x;
       const dy = e.clientY - pointerStart.current.y;
 
-      // Direction lock: first significant movement decides axis
       if (!isDragging.current) {
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 8) return; // too small to decide
+        if (dist < 8) return;
         if (Math.abs(dy) > Math.abs(dx)) {
-          // Vertical — cancel swipe, let scroll happen
           pointerStart.current = null;
           return;
         }
@@ -259,19 +278,19 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
 
       const w = getWidth();
       if (dx > w * SWIPE_DISMISS_THRESHOLD) {
-        animate(swipeProgress, 1, spring);
-        animate(swipeX, w, spring).then(() => {
+        animate(swipeProgress, 1, swipeSpring);
+        animate(swipeX, w, swipeSpring).then(() => {
           setShowParallax(false);
           swipeX.jump(0);
           swipeProgress.jump(0);
         });
         dispatch({ type: "POP" });
       } else {
-        animate(swipeX, 0, spring);
-        animate(swipeProgress, 0, spring).then(() => setShowParallax(false));
+        animate(swipeX, 0, swipeSpring);
+        animate(swipeProgress, 0, swipeSpring).then(() => setShowParallax(false));
       }
     },
-    [getWidth, swipeProgress, swipeX, spring]
+    [getWidth, swipeProgress, swipeX, swipeSpring]
   );
 
   const handlePointerCancel = React.useCallback(
@@ -279,17 +298,15 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
       if (!pointerStart.current || pointerStart.current.id !== e.pointerId) return;
       pointerStart.current = null;
       isDragging.current = false;
-      animate(swipeX, 0, spring);
-      animate(swipeProgress, 0, spring).then(() => setShowParallax(false));
+      animate(swipeX, 0, swipeSpring);
+      animate(swipeProgress, 0, swipeSpring).then(() => setShowParallax(false));
     },
-    [swipeProgress, swipeX, spring]
+    [swipeProgress, swipeX, swipeSpring]
   );
 
-  const topRoute = state.routes[state.routes.length - 1];
   const belowRoute = state.routes.length > 1 ? state.routes[state.routes.length - 2] : null;
   const BelowComponent = belowRoute ? screens.get(belowRoute.name)?.component : null;
 
-  // Resolve header title from screen definition
   const resolveTitle = React.useCallback(
     (routeName: string, params?: Record<string, unknown>): string => {
       const screen = screens.get(routeName);
@@ -300,10 +317,12 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
     [screens]
   );
 
-  const currentScreen = screens.get(topRoute.name);
   const headerShown = currentScreen?.headerShown !== false && currentScreen?.title !== undefined;
   const currentTitle = resolveTitle(topRoute.name, topRoute.params);
   const previousTitle = belowRoute ? resolveTitle(belowRoute.name, belowRoute.params) : "";
+
+  // For flip transition, we need perspective on the container
+  const needsPerspective = activeTransition === "flip";
 
   return (
     <StackContext.Provider value={navigationValue}>
@@ -328,11 +347,13 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
-          style={{ touchAction: isIOS ? "pan-y" : undefined }}
+          style={{
+            touchAction: supportsSwipeBack ? "pan-y" : undefined,
+            perspective: needsPerspective ? 1200 : undefined,
+          }}
         >
-          {/* Below screen (iOS parallax) — only rendered during active swipe
-              so it can never bleed through after push/pop transitions. */}
-          {isIOS && showParallax && BelowComponent && belowRoute && (
+          {/* Below screen (iOS parallax) — only rendered during active swipe */}
+          {supportsSwipeBack && showParallax && BelowComponent && belowRoute && (
             <motion.div
               className="absolute inset-0"
               style={{ x: bgX }}
@@ -359,9 +380,13 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
               exit="exit"
               transition={spring}
               className="absolute inset-0 bg-background"
+              style={{
+                transformStyle: needsPerspective ? "preserve-3d" : undefined,
+                backfaceVisibility: needsPerspective ? "hidden" : undefined,
+              }}
             >
               {/* iOS edge shadow — GPU-composited via opacity only */}
-              {isIOS && (
+              {activeTransition === "ios" && (
                 <motion.div
                   className="pointer-events-none absolute inset-y-0 -left-6 w-6"
                   style={{ boxShadow: "4px 0 16px rgba(0,0,0,0.15)" }}
@@ -397,10 +422,7 @@ function StackNavigator({ initialRoute, children, className }: StackNavigatorPro
             </motion.div>
           </AnimatePresence>
 
-          {/* Swipe-back overlay: sits on top of AnimatePresence and
-              shifts the visible screen during an active gesture. This is
-              a separate layer so it NEVER interferes with variant
-              enter/exit animations. */}
+          {/* Swipe-back overlay */}
           {showParallax && (
             <motion.div
               className="absolute inset-0 bg-background"

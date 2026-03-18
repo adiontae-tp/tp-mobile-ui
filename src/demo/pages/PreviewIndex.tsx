@@ -58,6 +58,12 @@ const sections = [
     ],
   },
   {
+    title: "Animation",
+    items: [
+      { path: "transition", title: "Transition" },
+    ],
+  },
+  {
     title: "Layout",
     items: [
       { path: "footer-buttons", title: "Footer Buttons" },

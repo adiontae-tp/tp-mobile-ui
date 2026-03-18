@@ -2,6 +2,7 @@ import * as React from "react";
 import { Sheet, type SheetRef } from "react-modal-sheet";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
+import { useSheetManager } from "@/components/ui/sheet-manager";
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -94,6 +95,8 @@ function BottomSheet({
   children,
 }: BottomSheetProps) {
   const sheetRef = React.useRef<SheetRef>(null);
+  const sheetManager = useSheetManager();
+  const sheetId = React.useId();
 
   // Open state
   const isControlledOpen = openProp !== undefined;
@@ -107,6 +110,15 @@ function BottomSheet({
     },
     [isControlledOpen, onOpenChange]
   );
+
+  // Register with global sheet manager — close others when opening, release when closing
+  React.useEffect(() => {
+    if (isOpen) {
+      sheetManager?.request(sheetId, () => handleOpenChange(false));
+    } else {
+      sheetManager?.release(sheetId);
+    }
+  }, [isOpen, sheetId, sheetManager, handleOpenChange]);
 
   // Detent state
   const isControlledDetent = activeDetentProp !== undefined;
@@ -366,7 +378,7 @@ const BottomSheetContent = React.forwardRef<HTMLDivElement, BottomSheetContentPr
             </div>
           </Sheet.Content>
         </Sheet.Container>
-        {modal && <Sheet.Backdrop />}
+        {modal && <Sheet.Backdrop onTap={handleClose} />}
       </Sheet>
     );
   }

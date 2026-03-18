@@ -7,34 +7,238 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Page, PageContent, ScrollView } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
-import { MapPin, FileText, Users } from "lucide-react";
+import {
+  MapPin,
+  FileText,
+  Users,
+  Tag,
+  Hash,
+  Search,
+  Check,
+} from "lucide-react";
+
+const categories = [
+  "General",
+  "Bug Report",
+  "Feature Request",
+  "Support",
+  "Billing",
+  "Security",
+];
+
+const countries = [
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "Germany",
+  "France",
+  "Japan",
+  "Brazil",
+  "India",
+  "South Korea",
+  "Mexico",
+  "Italy",
+  "Spain",
+  "Netherlands",
+  "Sweden",
+];
 
 export function SheetInputPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Text area example
+  // Notes — textarea
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
-  // Address example
+  // Address — multi-field form
   const [address, setAddress] = useState("");
   const [addressOpen, setAddressOpen] = useState(false);
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [zip, setZip] = useState("");
 
-  // Multi-select example
+  // Team — multi-select checkboxes
   const [team, setTeam] = useState<string[]>([]);
   const [teamOpen, setTeamOpen] = useState(false);
 
   const teamMembers = ["Alice", "Bob", "Carol", "Dave", "Eve", "Frank"];
+
+  // Category — single select
+  const [category, setCategory] = useState("");
+  const [categoryOpen, setCategoryOpen] = useState(false);
+
+  // Quantity — number stepper
+  const [quantity, setQuantity] = useState(1);
+  const [quantityOpen, setQuantityOpen] = useState(false);
+  const [quantityDraft, setQuantityDraft] = useState(1);
+
+  // Country — search select
+  const [country, setCountry] = useState("");
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+
+  const filteredCountries = countries.filter((c) =>
+    c.toLowerCase().includes(countrySearch.toLowerCase())
+  );
 
   return (
     <Page ref={containerRef}>
       <PageContent>
         <ScrollView className="p-4">
           <div className="flex flex-col gap-6">
+            {/* Category — single select */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Category
+              </span>
+              <SheetInput
+                open={categoryOpen}
+                onOpenChange={setCategoryOpen}
+                title="Select Category"
+                container={containerRef.current}
+              >
+                <SheetInputTrigger
+                  value={category}
+                  placeholder="Choose a category…"
+                  startIcon={<Tag className="h-4 w-4" />}
+                />
+                <div className="flex flex-col gap-1">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setCategory(cat);
+                        setCategoryOpen(false);
+                      }}
+                      className={cn(
+                        "flex min-h-touch items-center justify-between rounded-lg px-3 text-sm transition-colors",
+                        category === cat
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "active:bg-accent"
+                      )}
+                    >
+                      {cat}
+                      {category === cat && <Check className="h-4 w-4" />}
+                    </button>
+                  ))}
+                </div>
+              </SheetInput>
+            </div>
+
+            {/* Country — search select */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Country
+              </span>
+              <SheetInput
+                open={countryOpen}
+                onOpenChange={(open) => {
+                  if (open) setCountrySearch("");
+                  setCountryOpen(open);
+                }}
+                title="Select Country"
+                detents={["60%"]}
+                container={containerRef.current}
+              >
+                <SheetInputTrigger
+                  value={country}
+                  placeholder="Search country…"
+                  startIcon={<Search className="h-4 w-4" />}
+                />
+                <div className="flex flex-col gap-2">
+                  <Input
+                    placeholder="Search…"
+                    value={countrySearch}
+                    onChange={(e) => setCountrySearch(e.target.value)}
+                    startIcon={<Search className="h-4 w-4" />}
+                    autoFocus
+                  />
+                  <div className="flex max-h-[200px] flex-col gap-1 overflow-y-auto">
+                    {filteredCountries.length === 0 ? (
+                      <div className="py-4 text-center text-sm text-muted-foreground">
+                        No results found
+                      </div>
+                    ) : (
+                      filteredCountries.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => {
+                            setCountry(c);
+                            setCountryOpen(false);
+                          }}
+                          className={cn(
+                            "flex min-h-touch items-center justify-between rounded-lg px-3 text-sm transition-colors",
+                            country === c
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "active:bg-accent"
+                          )}
+                        >
+                          {c}
+                          {country === c && <Check className="h-4 w-4" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </SheetInput>
+            </div>
+
+            {/* Quantity — number stepper */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Quantity
+              </span>
+              <SheetInput
+                open={quantityOpen}
+                onOpenChange={(open) => {
+                  if (open) setQuantityDraft(quantity);
+                  setQuantityOpen(open);
+                }}
+                title="Set Quantity"
+                container={containerRef.current}
+              >
+                <SheetInputTrigger
+                  value={quantity > 0 ? String(quantity) : undefined}
+                  placeholder="Set quantity…"
+                  startIcon={<Hash className="h-4 w-4" />}
+                />
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="flex items-center gap-6">
+                    <button
+                      type="button"
+                      onClick={() => setQuantityDraft((q) => Math.max(0, q - 1))}
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-xl font-bold transition-colors active:bg-accent"
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[3ch] text-center text-3xl font-bold tabular-nums">
+                      {quantityDraft}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantityDraft((q) => q + 1)}
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-xl font-bold transition-colors active:bg-accent"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      setQuantity(quantityDraft);
+                      setQuantityOpen(false);
+                    }}
+                  >
+                    Confirm
+                  </Button>
+                </div>
+              </SheetInput>
+            </div>
+
             {/* Notes — textarea in sheet */}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -207,4 +411,3 @@ export function SheetInputPreview() {
     </Page>
   );
 }
-
