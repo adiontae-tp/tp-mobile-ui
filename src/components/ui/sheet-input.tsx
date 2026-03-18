@@ -63,6 +63,21 @@ function SheetInput({
     [openProp, dismiss]
   );
 
+  // Auto-focus first input/textarea when sheet opens
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (openProp && bodyRef.current) {
+      // Small delay to let the sheet animation start and DOM settle
+      const timer = setTimeout(() => {
+        const focusable = bodyRef.current?.querySelector<HTMLElement>(
+          "input, textarea, select, [contenteditable]"
+        );
+        focusable?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [openProp]);
+
   // Separate trigger from sheet body children
   let trigger: React.ReactNode = null;
   const body: React.ReactNode[] = [];
@@ -95,7 +110,9 @@ function SheetInput({
               )}
             </BottomSheetHeader>
           )}
-          {body}
+          <div ref={bodyRef}>
+            {body}
+          </div>
           <div className="h-2" />
         </BottomSheetContent>
       </BottomSheet>
