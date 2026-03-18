@@ -29,6 +29,7 @@ const sections = [
       { path: "calendar", title: "Calendar" },
       { path: "date-picker", title: "Date Picker" },
       { path: "time-picker", title: "Time Picker" },
+      { path: "sheet-input", title: "Sheet Input" },
     ],
   },
   {

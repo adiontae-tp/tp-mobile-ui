@@ -1,20 +1,39 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+
+const tapSpring = { type: "spring" as const, damping: 18, stiffness: 400, mass: 0.5 };
 
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { pressable?: boolean }
->(({ className, pressable, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
-      pressable && "active:scale-[0.98] transition-transform duration-100 cursor-pointer",
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, pressable, ...props }, ref) => {
+  if (pressable) {
+    return (
+      <motion.div
+        ref={ref}
+        className={cn(
+          "rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer",
+          className
+        )}
+        whileTap={{ scale: 0.98 }}
+        transition={tapSpring}
+        {...(props as React.ComponentPropsWithoutRef<typeof motion.div>)}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-lg border bg-card text-card-foreground shadow-sm",
+        className
+      )}
+      {...props}
+    />
+  );
+});
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<

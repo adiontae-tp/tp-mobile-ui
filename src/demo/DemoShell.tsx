@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import { Moon, Sun, Menu, X, Github } from "lucide-react";
 import packageJson from "../../package.json";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
@@ -36,6 +36,7 @@ const navSections = [
       { path: "/calendar", label: "Calendar" },
       { path: "/date-picker", label: "Date Picker" },
       { path: "/time-picker", label: "Time Picker" },
+      { path: "/sheet-input", label: "Sheet Input" },
     ],
   },
   {
@@ -135,6 +136,14 @@ export function DemoShell() {
         </div>
         <div className="flex items-center gap-1">
           <ThemeSwitcher />
+          <a
+            href="https://github.com/adiontae-tp/tp-mobile-ui"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+          >
+            <Github className="h-4 w-4" />
+          </a>
           <button
             onClick={toggleDark}
             className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"

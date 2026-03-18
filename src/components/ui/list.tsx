@@ -1,12 +1,27 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Search, X } from "lucide-react";
+import { motion } from "framer-motion";
 
 /* ─── Context ─────────────────────────────────────────────────────── */
 
 type ListVariant = "list" | "card" | "card-grid" | "menu";
 
 const ListContext = React.createContext<ListVariant>("list");
+
+/* ─── Spring configs ──────────────────────────────────────────────── */
+
+const tapSpring = { type: "spring" as const, damping: 18, stiffness: 400, mass: 0.5 };
+
+const staggerChildren = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.04 } },
+};
+
+const itemFade = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, damping: 20, stiffness: 300 } },
+};
 
 /* ─── List ────────────────────────────────────────────────────────── */
 
@@ -15,24 +30,34 @@ const List = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement> & {
     inset?: boolean;
     variant?: ListVariant;
+    /** Enable staggered mount animation for items */
+    animated?: boolean;
   }
->(({ className, inset, variant = "list", ...props }, ref) => (
-  <ListContext.Provider value={variant}>
-    <div
-      ref={ref}
-      role="list"
-      className={cn(
-        variant === "list" && "flex flex-col divide-y divide-border",
-        variant === "list" && inset && "mx-4 overflow-hidden rounded-lg border",
-        variant === "card" && "flex flex-col gap-3 px-4",
-        variant === "card-grid" && "grid grid-cols-2 gap-3 px-4",
-        variant === "menu" && "flex flex-col gap-6 px-4",
-        className
-      )}
-      {...props}
-    />
-  </ListContext.Provider>
-));
+>(({ className, inset, variant = "list", animated, ...props }, ref) => {
+  const Comp = animated ? motion.div : "div";
+  const motionProps = animated
+    ? { variants: staggerChildren, initial: "hidden", animate: "show" }
+    : {};
+
+  return (
+    <ListContext.Provider value={variant}>
+      <Comp
+        ref={ref}
+        role="list"
+        className={cn(
+          variant === "list" && "flex flex-col divide-y divide-border",
+          variant === "list" && inset && "mx-4 overflow-hidden rounded-lg border",
+          variant === "card" && "flex flex-col gap-3 px-4",
+          variant === "card-grid" && "grid grid-cols-2 gap-3 px-4",
+          variant === "menu" && "flex flex-col gap-6 px-4",
+          className
+        )}
+        {...motionProps}
+        {...(props as any)}
+      />
+    </ListContext.Provider>
+  );
+});
 List.displayName = "List";
 
 /* ─── ListSearch ──────────────────────────────────────────────────── */
@@ -163,62 +188,66 @@ const ListItem = React.forwardRef<HTMLDivElement, ListItemProps>(
 
     if (variant === "menu") {
       return (
-        <div
+        <motion.div
           ref={ref}
           role="listitem"
+          variants={itemFade}
           className={cn(
             "flex flex-row items-center gap-3 rounded-xl bg-card px-3 py-2.5 shadow-sm",
-            pressable &&
-              "cursor-pointer active:scale-[0.98] transition-transform duration-100",
+            pressable && "cursor-pointer",
             className
           )}
-          {...props}
+          {...(pressable ? { whileTap: { scale: 0.98 }, transition: tapSpring } : {})}
+          {...(props as any)}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">{children}</div>
           {chevron && (
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
-        </div>
+        </motion.div>
       );
     }
 
     if (variant === "card" || variant === "card-grid") {
       return (
-        <div
+        <motion.div
           ref={ref}
           role="listitem"
+          variants={itemFade}
           className={cn(
             "flex rounded-lg border bg-card p-3",
             variant === "card" && "flex-row items-center gap-3",
             variant === "card-grid" && "flex-col",
-            pressable &&
-              "cursor-pointer active:scale-[0.98] transition-transform duration-100",
+            pressable && "cursor-pointer",
             className
           )}
-          {...props}
+          {...(pressable ? { whileTap: { scale: 0.98 }, transition: tapSpring } : {})}
+          {...(props as any)}
         >
           {children}
-        </div>
+        </motion.div>
       );
     }
 
     return (
-      <div
+      <motion.div
         ref={ref}
         role="listitem"
+        variants={itemFade}
         className={cn(
           "flex min-h-touch items-center gap-3 bg-card px-4",
           pressable &&
             "cursor-pointer active:bg-accent transition-colors duration-100",
           className
         )}
-        {...props}
+        {...(pressable ? { whileTap: { scale: 0.98 }, transition: tapSpring } : {})}
+        {...(props as any)}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">{children}</div>
         {chevron && (
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
         )}
-      </div>
+      </motion.div>
     );
   }
 );
